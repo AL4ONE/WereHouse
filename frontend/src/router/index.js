@@ -27,61 +27,61 @@ const router = createRouter({
     {
       path: '/dashboard/Manajer',
       name: 'dashboard-Manajer',
-      component: () => DashboardManajer,
+      component: DashboardManajer,
       meta: { requiresAuth: true, role: 'Manajer' }
     },
     {
       path: '/dashboard/Admin',
       name: 'dashboard-Admin',
-      component: () => DashboardAdmin,
+      component: DashboardAdmin,
       meta: { requiresAuth: true, role: 'Admin' }
     },
     {
       path: '/dashboard/Petugas',
       name: 'dashboard-Petugas',
-      component: () => DashboardPetugas,
+      component: DashboardPetugas,
       meta: { requiresAuth: true, role: 'Petugas' }
     },
     {
       path: '/Petugas/barang-masuk',
       name: 'Petugas-barang-masuk',
-      component: () => BarangMasuk,
+      component: BarangMasuk,
       meta: { requiresAuth: true, role: 'Petugas' }
     },
     {
       path: '/Petugas/barang-keluar',
       name: 'Petugas-barang-keluar',
-      component: () => BarangKeluar,
+      component: BarangKeluar,
       meta: { requiresAuth: true, role: 'Petugas' }
     },
     {
       path: '/Petugas/barang',
       name: 'Petugas-barang',
-      component: () => BarangPetugas,
+      component: BarangPetugas,
       meta: { requiresAuth: true, role: 'Petugas' }
     },
     {
       path: '/Admin/barangs',
       name: 'Admin-barang',
-      component: () => AdminBarang,
+      component: AdminBarang,
       meta: { requiresAuth: true, role: 'Admin' }
     },
     {
       path: '/Admin/suppliers',
       name: 'Admin-supplier',
-      component: () => SupplierAdmin,
+      component: SupplierAdmin,
       meta: { requiresAuth: true, role: 'Admin' }
     },
     {
       path: '/Admin/barang-masuk',
       name: 'Admin-barang-masuk',
-      component: () => AdminBarangMasuk,
+      component: AdminBarangMasuk,
       meta: { requiresAuth: true, role: 'Admin' }
     },
     {
       path: '/Admin/barang-keluar',
       name: 'Admin-barang-keluar',
-      component: () => AdminBarangKeluar,
+      component: AdminBarangKeluar,
       meta: { requiresAuth: true, role: 'Admin' }
     },
   ],
