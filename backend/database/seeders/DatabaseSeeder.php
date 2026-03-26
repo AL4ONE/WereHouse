@@ -18,23 +18,29 @@ class DatabaseSeeder extends Seeder
     {
         // User::factory(10)->create();
 
-        User::create([
-            'name' => "Admin",
-            'email' => "Admin@gmail.com",
-            'password' => Hash::make("password"),
-            'role' => "Admin",
-        ]);
-        User::create([
-            'name' => "Petugas",
-            'email' => "Petugas@gmail.com",
-            'password' => Hash::make("password"),
-            'role' => "Petugas",
-        ]);
-        User::create([
-            'name' => "Manajer",
-            'email' => "Manajer@gmail.com",
-            'password' => Hash::make("password"),
-            'role' => "Manajer",
-        ]);
+        User::firstOrCreate(
+            ['email' => "Admin@gmail.com"],
+            [
+                'name' => "Admin",
+                'password' => Hash::make("password"),
+                'role' => "Admin",
+            ]
+        );
+        User::firstOrCreate(
+            ['email' => "Petugas@gmail.com"],
+            [
+                'name' => "Petugas",
+                'password' => Hash::make("password"),
+                'role' => "Petugas",
+            ]
+        );
+        User::firstOrCreate(
+            ['email' => "Manajer@gmail.com"],
+            [
+                'name' => "Manajer",
+                'password' => Hash::make("password"),
+                'role' => "Manajer",
+            ]
+        );
     }
 }
