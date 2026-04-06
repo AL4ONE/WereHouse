@@ -10,6 +10,7 @@ const barangs = ref([])
 const isLoading = ref(false)
 const startDate = ref('')
 const endDate = ref('')
+const reportType = ref('semua')
 
 async function fetchBarangs() {
   isLoading.value = true
@@ -20,7 +21,7 @@ async function fetchBarangs() {
   finally { isLoading.value = false }
 }
 
-const hasFilter = computed(() => !!(startDate.value || endDate.value))
+const hasFilter = computed(() => !!(startDate.value || endDate.value || reportType.value !== 'semua'))
 
 const isDateInRange = (dateStr) => {
   if (!startDate.value && !endDate.value) return true
@@ -33,37 +34,88 @@ const isDateInRange = (dateStr) => {
 }
 
 const reportData = computed(() => {
-  let filtered = barangs.value
-  if (hasFilter.value) filtered = filtered.filter(p => isDateInRange(p.created_at))
-  return filtered.map(p => {
-    const filteredMasuk = (p.barang_masuks || []).filter(item => isDateInRange(item.created_at))
-    const filteredKeluar = (p.barang_keluars || []).filter(item => isDateInRange(item.created_at))
-    const opnames = p.status_op_names || []
-    const totalMasuk = filteredMasuk.reduce((sum, item) => sum + item.stock, 0)
-    const totalKeluar = filteredKeluar.reduce((sum, item) => sum + item.stock, 0)
-    return { ...p, totalMasuk, totalKeluar, opnames }
-  })
+  if (reportType.value === 'semua') {
+    let filtered = barangs.value
+    if (startDate.value || endDate.value) {
+      filtered = filtered.filter(p => isDateInRange(p.created_at))
+    }
+    return filtered.map(p => {
+      const filteredMasuk = (p.barang_masuks || []).filter(item => isDateInRange(item.created_at))
+      const filteredKeluar = (p.barang_keluars || []).filter(item => isDateInRange(item.created_at))
+      const opnames = p.status_op_names || []
+      const totalMasuk = filteredMasuk.reduce((sum, item) => sum + item.stock, 0)
+      const totalKeluar = filteredKeluar.reduce((sum, item) => sum + item.stock, 0)
+      return { ...p, totalMasuk, totalKeluar, opnames }
+    })
+  } else if (reportType.value === 'masuk') {
+    let list = []
+    barangs.value.forEach(p => {
+      const masukList = (p.barang_masuks || []).filter(item => isDateInRange(item.created_at))
+      masukList.forEach(item => {
+        list.push({ id: item.id, created_at: item.created_at, name: p.name, satuan: p.satuan, jumlah: item.stock })
+      })
+    })
+    return list.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+  } else if (reportType.value === 'keluar') {
+    let list = []
+    barangs.value.forEach(p => {
+      const keluarList = (p.barang_keluars || []).filter(item => isDateInRange(item.created_at))
+      keluarList.forEach(item => {
+        list.push({ id: item.id, created_at: item.created_at, name: p.name, satuan: p.satuan, jumlah: item.stock })
+      })
+    })
+    return list.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+  }
+  return []
 })
 
-function resetFilter() { startDate.value = ''; endDate.value = '' }
+function resetFilter() {
+  startDate.value = ''
+  endDate.value = ''
+  reportType.value = 'semua'
+}
 
 function exportLaporanUtama() {
-  const doc = new jsPDF('landscape')
-  doc.text('Laporan Produk: Stok, Transaksi & Opname', 14, 15)
+  const doc = new jsPDF(reportType.value === 'semua' ? 'landscape' : 'portrait')
+  
+  let title = 'Laporan Produk: Stok, Transaksi & Opname'
+  if (reportType.value === 'masuk') title = 'Laporan Transaksi Barang Masuk'
+  if (reportType.value === 'keluar') title = 'Laporan Transaksi Barang Keluar'
+  
+  doc.text(title, 14, 15)
   doc.setFontSize(10)
   doc.text(`Tanggal Cetak: ${new Date().toLocaleString()}`, 14, 22)
   doc.text(`Periode: ${startDate.value || 'Awalan'} s.d ${endDate.value || 'Sekarang'}`, 14, 28)
-  const tableData = reportData.value.map((p, i) => {
-    const opS = p.opnames.map(o => `${o.tipe === 'penambahan' ? '+' : '-'}${o.stock} (${o.keterangan})`).join('\n') || '-'
-    return [i + 1, p.name, p.satuan, p.stock_awal, p.totalMasuk, p.totalKeluar, opS, p.stock_saat_ini]
-  })
+  
+  let head = []
+  let body = []
+  
+  if (reportType.value === 'semua') {
+    head = [['No', 'Tanggal', 'Nama Barang', 'Satuan', 'Stok Awal', 'Total Masuk', 'Total Keluar', 'Opname', 'Sisa Stok']]
+    body = reportData.value.map((p, i) => {
+      const opS = p.opnames.map(o => `${o.tipe === 'penambahan' ? '+' : '-'}${o.stock} (${o.keterangan})`).join('\n') || '-'
+      const tanggal = new Date(p.created_at).toLocaleDateString('id-ID')
+      return [i + 1, tanggal, p.name, p.satuan, p.stock_awal, p.totalMasuk, p.totalKeluar, opS, p.stock_saat_ini]
+    })
+  } else {
+    const qtyLabel = reportType.value === 'masuk' ? 'Barang Masuk (+)' : 'Barang Keluar (-)'
+    head = [['No', 'Tanggal', 'Nama Barang', 'Satuan', qtyLabel]]
+    body = reportData.value.map((p, i) => {
+      const tanggal = new Date(p.created_at).toLocaleDateString('id-ID')
+      return [i + 1, tanggal, p.name, p.satuan, p.jumlah]
+    })
+  }
+
   autoTable(doc, {
     startY: 34,
-    head: [['No', 'Nama Barang', 'Satuan', 'Stok Awal', 'Total Masuk', 'Total Keluar', 'Opname', 'Sisa Stok']],
-    body: tableData, theme: 'grid',
-    headStyles: { fillColor: [99, 102, 241] }, columnStyles: { 6: { cellWidth: 50 } }, styles: { fontSize: 9 },
+    head: head,
+    body: body, 
+    theme: 'grid',
+    headStyles: { fillColor: reportType.value === 'semua' ? [249, 115, 22] : (reportType.value === 'masuk' ? [34,197,94] : [239,68,68]) }, 
+    styles: { fontSize: 9 },
   })
-  doc.save(`Laporan_Produk_${startDate.value || 'Semua'}_${endDate.value || 'Sekarang'}.pdf`)
+  
+  doc.save(`Laporan_${reportType.value}_${startDate.value || 'Semua'}_${endDate.value || 'Sekarang'}.pdf`)
 }
 
 function exportLowStock() {
@@ -76,8 +128,11 @@ function exportLowStock() {
   doc.setFontSize(10)
   doc.text(`Tanggal Cetak: ${new Date().toLocaleString()}`, 14, 22)
   autoTable(doc, {
-    startY: 30, head: [['No', 'Nama Barang', 'Sisa Stok', 'Satuan']],
-    body: lowStock.map((p, i) => [i + 1, p.name, p.stock_saat_ini, p.satuan]),
+    startY: 30, head: [['No', 'Tanggal', 'Nama Barang', 'Sisa Stok', 'Satuan']],
+    body: lowStock.map((p, i) => {
+      const tanggal = new Date(p.created_at).toLocaleDateString('id-ID')
+      return [i + 1, tanggal, p.name, p.stock_saat_ini, p.satuan]
+    }),
     theme: 'striped', headStyles: { fillColor: [220, 38, 38] }
   })
   doc.save(`Laporan_Stok_Menipis_${new Date().toISOString().split('T')[0]}.pdf`)
@@ -98,7 +153,7 @@ onMounted(() => { fetchBarangs() })
       <div class="filter-top">
         <div class="filter-title">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
-          <strong>Filter Range Tanggal</strong>
+          <strong>Filter Laporan</strong>
         </div>
         <button class="btn-ghost" @click="resetFilter" v-if="hasFilter">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
@@ -107,15 +162,23 @@ onMounted(() => { fetchBarangs() })
       </div>
       <div class="filter-row">
         <div class="filter-group">
-          <label>Dari</label>
+          <label>Jenis Laporan</label>
+          <select v-model="reportType">
+            <option value="semua">Semua (Agregat Produk)</option>
+            <option value="masuk">Barang Masuk (Transaksi)</option>
+            <option value="keluar">Barang Keluar (Transaksi)</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>Dari Tanggal</label>
           <input type="date" v-model="startDate" />
         </div>
         <div class="filter-group">
-          <label>Sampai</label>
+          <label>Sampai Tanggal</label>
           <input type="date" v-model="endDate" />
         </div>
       </div>
-      <p v-if="hasFilter" class="filter-info">📋 Menampilkan {{ reportData.length }} barang dalam rentang waktu terpilih.</p>
+      <p v-if="hasFilter" class="filter-info">📋 Menampilkan data laporan berdasarkan filter yang terpilih.</p>
     </div>
 
     <!-- Export -->
@@ -138,8 +201,9 @@ onMounted(() => { fetchBarangs() })
     <div v-else class="glass-card table-card">
       <table>
         <thead>
-          <tr>
+          <tr v-if="reportType === 'semua'">
             <th>No</th>
+            <th>Tanggal</th>
             <th>Nama Barang</th>
             <th>Satuan</th>
             <th>Stok Awal</th>
@@ -148,29 +212,70 @@ onMounted(() => { fetchBarangs() })
             <th>Opname</th>
             <th>Sisa Stok</th>
           </tr>
+          <tr v-else-if="reportType === 'masuk'">
+            <th>No</th>
+            <th>Tanggal</th>
+            <th>Nama Barang</th>
+            <th>Satuan</th>
+            <th>Total Masuk (+)</th>
+          </tr>
+          <tr v-else-if="reportType === 'keluar'">
+            <th>No</th>
+            <th>Tanggal</th>
+            <th>Nama Barang</th>
+            <th>Satuan</th>
+            <th>Total Keluar (-)</th>
+          </tr>
         </thead>
         <tbody>
-          <tr v-for="(p, i) in reportData" :key="p.id">
-            <td class="num-cell">{{ i + 1 }}</td>
-            <td class="name-cell">{{ p.name }}</td>
-            <td>{{ p.satuan }}</td>
-            <td class="num-cell">{{ p.stock_awal }}</td>
-            <td class="num-cell ok">+{{ p.totalMasuk }}</td>
-            <td class="num-cell err">-{{ p.totalKeluar }}</td>
-            <td class="opname-cell">
-              <div v-if="p.opnames.length" class="opname-list">
-                <div v-for="op in p.opnames" :key="op.id" class="opname-chip">
-                  <span :class="op.tipe === 'penambahan' ? 'ok' : 'err'">{{ op.tipe === 'penambahan' ? '+' : '-' }}{{ op.stock }}</span>
-                  <span class="opname-ket">{{ op.keterangan }}</span>
+          <!-- Table rows for 'semua' -->
+          <template v-if="reportType === 'semua'">
+            <tr v-for="(p, i) in reportData" :key="p.id">
+              <td class="num-cell">{{ i + 1 }}</td>
+              <td class="muted">{{ new Date(p.created_at).toLocaleDateString('id-ID') }}</td>
+              <td class="name-cell">{{ p.name }}</td>
+              <td>{{ p.satuan }}</td>
+              <td class="num-cell">{{ p.stock_awal }}</td>
+              <td class="num-cell ok">+{{ p.totalMasuk }}</td>
+              <td class="num-cell err">-{{ p.totalKeluar }}</td>
+              <td class="opname-cell">
+                <div v-if="p.opnames.length" class="opname-list">
+                  <div v-for="op in p.opnames" :key="op.id" class="opname-chip">
+                    <span :class="op.tipe === 'penambahan' ? 'ok' : 'err'">{{ op.tipe === 'penambahan' ? '+' : '-' }}{{ op.stock }}</span>
+                    <span class="opname-ket">{{ op.keterangan }}</span>
+                  </div>
                 </div>
-              </div>
-              <span v-else class="muted">-</span>
-            </td>
-            <td class="num-cell sisa" :class="p.stock_saat_ini <= 5 ? 'err' : 'ok-bold'">{{ p.stock_saat_ini }}</td>
-          </tr>
+                <span v-else class="muted">-</span>
+              </td>
+              <td class="num-cell sisa" :class="p.stock_saat_ini <= 5 ? 'err' : 'ok-bold'">{{ p.stock_saat_ini }}</td>
+            </tr>
+          </template>
+
+          <!-- Table rows for 'masuk' -->
+          <template v-if="reportType === 'masuk'">
+            <tr v-for="(p, i) in reportData" :key="'masuk-'+p.id">
+              <td class="num-cell">{{ i + 1 }}</td>
+              <td class="muted">{{ new Date(p.created_at).toLocaleDateString('id-ID') }}</td>
+              <td class="name-cell">{{ p.name }}</td>
+              <td>{{ p.satuan }}</td>
+              <td class="num-cell ok">+{{ p.jumlah }}</td>
+            </tr>
+          </template>
+
+          <!-- Table rows for 'keluar' -->
+          <template v-if="reportType === 'keluar'">
+            <tr v-for="(p, i) in reportData" :key="'keluar-'+p.id">
+              <td class="num-cell">{{ i + 1 }}</td>
+              <td class="muted">{{ new Date(p.created_at).toLocaleDateString('id-ID') }}</td>
+              <td class="name-cell">{{ p.name }}</td>
+              <td>{{ p.satuan }}</td>
+              <td class="num-cell err">-{{ p.jumlah }}</td>
+            </tr>
+          </template>
+
           <tr v-if="!reportData.length">
-            <td colspan="8" class="empty-cell">
-              {{ hasFilter ? '❌ Tidak ada barang dalam rentang waktu ini.' : '📭 Belum ada data barang.' }}
+            <td :colspan="reportType === 'semua' ? 9 : 5" class="empty-cell">
+              {{ hasFilter ? '❌ Tidak ada transaksi laporan dalam rentang waktu ini.' : '📭 Belum ada data.' }}
             </td>
           </tr>
         </tbody>
@@ -183,7 +288,7 @@ onMounted(() => { fetchBarangs() })
 .hero { margin-bottom: 28px; }
 .hero h1 { font-size: 28px; font-weight: 800; color: var(--text-primary); letter-spacing: -0.5px; margin-bottom: 6px; }
 .gradient-text {
-  background: linear-gradient(135deg, #f59e0b, #f97316);
+  background: linear-gradient(135deg, var(--accent), #f59e0b);
   -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
 }
 .hero p { font-size: 15px; color: var(--text-muted); }
@@ -211,12 +316,13 @@ onMounted(() => { fetchBarangs() })
 .filter-row { display: flex; gap: 14px; flex-wrap: wrap; }
 .filter-group { display: flex; flex-direction: column; gap: 6px; }
 .filter-group label { font-size: 12px; color: var(--text-muted); font-weight: 500; }
-.filter-group input {
+.filter-group input, .filter-group select {
   padding: 9px 14px; border-radius: var(--radius-sm);
   background: var(--bg-base); border: 1px solid var(--border-default);
   color: var(--text-primary); font-size: 13px; font-family: inherit; outline: none;
 }
-.filter-group input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+.filter-group select { appearance: none; padding-right: 32px; background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23b0b0b0%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E"); background-repeat: no-repeat; background-position: right 10px top 50%; background-size: 10px auto; }
+.filter-group input:focus, .filter-group select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
 .filter-info { margin-top: 12px; font-size: 12px; color: var(--text-secondary); }
 
 /* Export */
