@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Barang extends Model
 {
-    protected $guarded = [];
+    protected $fillable = ['name', 'stock_awal', 'stock_saat_ini', 'satuan'];
     public function barangMasuks()
     {
         return $this->hasMany(BarangMasuk::class);

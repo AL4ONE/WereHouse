@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class BarangMasuk extends Model
 {
-    protected $guarded = [];
+    protected $fillable = ['barang_id', 'supplier_id', 'stock'];
     public function barang()
     {
         return $this->belongsTo(Barang::class);

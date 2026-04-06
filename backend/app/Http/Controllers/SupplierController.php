@@ -27,7 +27,7 @@ class SupplierController extends Controller
 
         if($val->fails()){
             return response()->json([
-                'error' => $val->errors(),
+                'error' => $val->errors(),  
             ]);
         }
 

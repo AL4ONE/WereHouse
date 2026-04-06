@@ -6,5 +6,5 @@ use Illuminate\Database\Eloquent\Model;
 
 class StatusOpName extends Model
 {
-    protected $guarded = [];
+    protected $fillable = ['stock', 'tipe', 'keterangan', 'barang_id'];
 }

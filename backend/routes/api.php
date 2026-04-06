@@ -24,16 +24,14 @@ Route::middleware(AuthMiddleware::class)->group(function () {
         Route::post("barang", [BarangController::class, "create"]);
         Route::delete("barang/{id}", [BarangController::class, "destroy"]);
         Route::post("barang/{id}/suppliers", [BarangController::class, "assignSuppliers"]);
- 
 
- 
+
+
         Route::post("supplier", [SupplierController::class, "create"]);
         Route::delete("supplier/{id}", [SupplierController::class, "destroy"]);
         Route::post("supplier/{id}", [SupplierController::class, "update"]);
 
     });
-
-
 
     Route::middleware(TwoRoleMiddleware::class)->group(function () {
         Route::get("suppliers", [SupplierController::class, "index"]);
@@ -43,5 +41,8 @@ Route::middleware(AuthMiddleware::class)->group(function () {
         Route::post("barang/{id}", [BarangController::class, "update"]);
         Route::post("barang/{id}/opName", [BarangController::class, "addOpName"]);
         Route::get("barang/opName", [BarangController::class, "opName"]);
+
+        Route::get("/inventoryIn", [BarangMasukController::class, "index"]);
+        Route::get("/inventoryOut", [BarangKeluarController::class, "index"]);
     });
 });

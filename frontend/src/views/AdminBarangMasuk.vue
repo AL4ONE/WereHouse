@@ -38,6 +38,7 @@ async function fetchBarangs() {
     const res = await api.get('/barangs')
     barangs.value = res.data.data
   } catch (e) {
+    console.log(e)
   }
 }
 
@@ -50,9 +51,10 @@ async function handleSubmit() {
     form.value.barang_id = ''
     form.value.supplier_id = ''
     form.value.stock = 1
+    console.log(res.data)
     fetchBarangs()
   } catch (e) {
-    
+    console.log(e)
   } finally { isLoading.value = false }
 }
 

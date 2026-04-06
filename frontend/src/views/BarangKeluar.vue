@@ -2,70 +2,55 @@
 import { ref, onMounted } from 'vue'
 import api from '@/api'
 import DashboardLayout from '@/layouts/DashboardLayout.vue'
+import { useAuthStore } from '@/stores/auth'
+import { adminNavLinks, petugasNavLinks } from '@/config/navLinks'
 
-const navLinks = [
-  { path: '/dashboard/Petugas', label: '🏠 Dashboard' },
-  { path: '/Petugas/barang-masuk', label: '📥 Barang Masuk' },
-  { path: '/Petugas/barang-keluar', label: '📤 Barang Keluar' },
-  { path: '/Petugas/barang', label: 'barang' },
-]
+const authStore = useAuthStore()
+const navLinks = authStore.userRole === 'Admin' ? adminNavLinks : petugasNavLinks
 
 const barangs = ref([])
 const msg = ref({ text: '', type: '' })
 const isLoading = ref(false)
-
-const form = ref({
-  barang_id: '',
-  destination: '',
-  stock: 1,
-})
+const form = ref({ barang_id: '', destination: '', stock: 1 })
 
 async function fetchBarangs() {
-  try {
-    const res = await api.get('/barangs')
-    barangs.value = res.data.data
-  } catch (e) {
-    console.log(e)
-  }
+  try { const res = await api.get('/barangs'); barangs.value = res.data.data } catch (e) { console.log(e) }
 }
 
 async function handleSubmit() {
   msg.value = { text: '', type: '' }
   isLoading.value = true
   try {
-    const res = await api.post('/inventoryOut', form.value)
-    console.log(res)
-    msg.value = { text: `catatan barang keluar berhasil`, type: 'ok' }
-    form.value.barang_id = ''
-    form.value.destination = ''
-    form.value.stock = 1
+    await api.post('/inventoryOut', form.value)
+    msg.value = { text: 'Catatan barang keluar berhasil!', type: 'ok' }
+    form.value = { barang_id: '', destination: '', stock: 1 }
     fetchBarangs()
-  } catch (e) {
-    console.log(e)
-  } finally { isLoading.value = false }
+  } catch (e) { console.log(e) }
+  finally { isLoading.value = false }
 }
 
-onMounted(() => {
-  fetchBarangs()
-})
+onMounted(() => { fetchBarangs() })
 </script>
 
 <template>
   <DashboardLayout :navLinks="navLinks">
-    <h1 class="page-title">📤 Barang Keluar</h1>
-    <p class="page-desc">Catat barang keluar dari gudang ke tujuan</p>
+    <div class="hero">
+      <h1>📤 Barang <span class="gradient-text">Keluar</span></h1>
+      <p>Catat barang keluar dari gudang ke tujuan</p>
+    </div>
 
-    <div v-if="msg.text" class="alert" :class="msg.type">{{ msg.text }}</div>
+    <div v-if="msg.text" class="alert" :class="msg.type">
+      <svg v-if="msg.type==='ok'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      {{ msg.text }}
+    </div>
 
-    <div class="form-card">
+    <div class="glass-card form-card">
       <form @submit.prevent="handleSubmit">
         <div class="field">
           <label>Barang</label>
           <select v-model="form.barang_id" required>
             <option value="" disabled>-- Pilih Barang --</option>
-            <option v-for="p in barangs" :key="p.id" :value="p.id">
-              {{ p.name }} (stok: {{ p.stock_saat_ini }})
-            </option>
+            <option v-for="p in barangs" :key="p.id" :value="p.id">{{ p.name }} (stok: {{ p.stock_saat_ini }})</option>
           </select>
         </div>
         <div class="field">
@@ -77,6 +62,7 @@ onMounted(() => {
           <input v-model.number="form.stock" type="number" min="1" required />
         </div>
         <button type="submit" class="btn-submit orange" :disabled="isLoading">
+          <span v-if="isLoading" class="spinner"></span>
           {{ isLoading ? 'Memproses...' : 'Simpan Barang Keluar' }}
         </button>
       </form>
@@ -85,26 +71,43 @@ onMounted(() => {
 </template>
 
 <style scoped>
-.page-title { font-size: 22px; color: #f1f5f9; margin-bottom: 4px; }
-.page-desc { font-size: 14px; color: #64748b; margin-bottom: 20px; }
+.hero { margin-bottom: 24px; }
+.hero h1 { font-size: 26px; font-weight: 800; color: var(--text-primary); margin-bottom: 4px; }
+.gradient-text { background: linear-gradient(135deg, var(--accent), #f59e0b); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.hero p { font-size: 14px; color: var(--text-muted); }
 
-.alert { padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 16px; }
-.alert.ok { background: rgba(34,197,94,0.1); color: #4ade80; border: 1px solid rgba(34,197,94,0.15); }
-.alert.error { background: rgba(248,113,113,0.1); color: #f87171; border: 1px solid rgba(248,113,113,0.15); }
-
-.form-card { background: #1e1e2e; border: 1px solid #2a2a3d; border-radius: 14px; padding: 24px; max-width: 480px; }
-
-.field { margin-bottom: 14px; }
-.field label { display: block; font-size: 13px; color: #94a3b8; margin-bottom: 6px; }
-.field input, .field select {
-  width: 100%; padding: 9px 12px; background: #13131f; border: 1px solid #363650;
-  border-radius: 8px; color: #e2e8f0; font-size: 14px; outline: none; box-sizing: border-box;
+.alert {
+  padding: 12px 16px; border-radius: var(--radius-sm); font-size: 13px; margin-bottom: 18px;
+  display: flex; align-items: center; gap: 8px;
 }
-.field input:focus, .field select:focus { border-color: #6366f1; }
-.field select option { background: #1e1e2e; color: #e2e8f0; }
+.alert.ok { background: var(--success-bg); color: var(--success); border: 1px solid rgba(52,211,153,0.15); }
+.alert.error { background: var(--danger-bg); color: var(--danger); border: 1px solid rgba(251,113,133,0.15); }
 
-.btn-submit { border: none; padding: 10px 20px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 4px; color: #fff; }
-.btn-submit.orange { background: #f97316; }
-.btn-submit.orange:hover { background: #ea580c; }
-.btn-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+.glass-card { background: var(--bg-surface); border: 1px solid var(--border-default); border-radius: var(--radius-lg); }
+.form-card { padding: 28px; max-width: 500px; }
+
+.field { margin-bottom: 18px; }
+.field label { display: block; font-size: 13px; color: var(--text-secondary); margin-bottom: 8px; font-weight: 500; }
+.field input, .field select {
+  width: 100%; padding: 11px 14px; background: var(--bg-base); border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm); color: var(--text-primary); font-size: 14px; font-family: inherit; outline: none;
+}
+.field input:focus, .field select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+.field select option { background: var(--bg-surface); color: var(--text-primary); }
+.field input::placeholder { color: var(--text-muted); }
+
+.btn-submit {
+  width: 100%; border: none; padding: 12px 20px; border-radius: var(--radius-sm);
+  font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit; color: #fff;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.btn-submit.orange {
+  background: linear-gradient(135deg, var(--accent), #f59e0b);
+  box-shadow: 0 2px 12px var(--accent-glow);
+}
+.btn-submit.orange:hover { transform: translateY(-1px); box-shadow: 0 4px 20px var(--accent-glow); }
+.btn-submit:disabled { opacity: 0.6; cursor: not-allowed; transform: none !important; }
+
+.spinner { width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.6s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
 </style>
