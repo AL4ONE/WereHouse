@@ -21,13 +21,13 @@ export const useAuthStore = defineStore("auth", () => {
         try {
             await api.post("/logout")
         } catch (e) {
-            // ignore
+            console.log(e)
         }
         token.value = null
         user.value = null
         localStorage.removeItem("token")
         localStorage.removeItem("user")
-          window.location.reload()
+        window.location.reload()
     }
 
     return { token, user, login, logout, isLoggedIn, userRole }

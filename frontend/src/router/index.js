@@ -78,7 +78,6 @@ const router = createRouter({
       component: () => import('@/views/BarangKeluar.vue'),
       meta: { requiresAuth: true, role: 'Admin' }
     },
-    // Fallback Catch-all route (404)
     {
       path: '/:pathMatch(.*)*',
       redirect: '/login'

@@ -17,8 +17,12 @@ async function fetchBarangs() {
   try {
     const res = await api.get('/barangs')
     barangs.value = res.data.data
-  } catch (e) { console.error(e) }
-  finally { isLoading.value = false }
+  } catch (e) { 
+    console.error(e) 
+  } 
+  finally { 
+    isLoading.value = false 
+  }
 }
 
 const hasFilter = computed(() => !!(startDate.value || endDate.value || reportType.value !== 'semua'))
@@ -28,18 +32,22 @@ const isDateInRange = (dateStr) => {
   if (!dateStr) return false
   const itemDate = new Date(dateStr).getTime()
   const start = startDate.value ? new Date(startDate.value).getTime() : 0
-  let end = Number.MAX_SAFE_INTEGER
-  if (endDate.value) { const e = new Date(endDate.value); e.setHours(23,59,59,999); end = e.getTime() }
+  let end = Number.MAX_SAFE_INTEGER 
+  if (endDate.value) { 
+    const e = new Date(endDate.value); 
+    e.setHours(23,59,59,999); 
+    end = e.getTime() 
+  }
   return itemDate >= start && itemDate <= end
 }
 
 const reportData = computed(() => {
-  if (reportType.value === 'semua') {
+  if (reportType.value === 'semua' || reportType.value === 'menipis') {
     let filtered = barangs.value
     if (startDate.value || endDate.value) {
       filtered = filtered.filter(p => isDateInRange(p.created_at))
     }
-    return filtered.map(p => {
+    const mapped = filtered.map(p => {
       const filteredMasuk = (p.barang_masuks || []).filter(item => isDateInRange(item.created_at))
       const filteredKeluar = (p.barang_keluars || []).filter(item => isDateInRange(item.created_at))
       const opnames = p.status_op_names || []
@@ -47,6 +55,11 @@ const reportData = computed(() => {
       const totalKeluar = filteredKeluar.reduce((sum, item) => sum + item.stock, 0)
       return { ...p, totalMasuk, totalKeluar, opnames }
     })
+
+    if (reportType.value === 'menipis') {
+      return mapped.filter(p => p.stock_saat_ini <= 5)
+    }
+    return mapped
   } else if (reportType.value === 'masuk') {
     let list = []
     barangs.value.forEach(p => {
@@ -75,67 +88,33 @@ function resetFilter() {
   reportType.value = 'semua'
 }
 
-function exportLaporanUtama() {
-  const doc = new jsPDF(reportType.value === 'semua' ? 'landscape' : 'portrait')
+// Fungsi print PDF dengan jsPDF yang sangat simpel (tanpa logic ribet)
+function cetakPDF() {
+  const doc = new jsPDF()
   
-  let title = 'Laporan Produk: Stok, Transaksi & Opname'
-  if (reportType.value === 'masuk') title = 'Laporan Transaksi Barang Masuk'
-  if (reportType.value === 'keluar') title = 'Laporan Transaksi Barang Keluar'
-  
-  doc.text(title, 14, 15)
+  doc.text('Laporan Inventori Gudang', 14, 15)
   doc.setFontSize(10)
-  doc.text(`Tanggal Cetak: ${new Date().toLocaleString()}`, 14, 22)
-  doc.text(`Periode: ${startDate.value || 'Awalan'} s.d ${endDate.value || 'Sekarang'}`, 14, 28)
-  
+  doc.text(`Filter: ${reportType.value.toUpperCase()}`, 14, 22)
+
   let head = []
   let body = []
-  
-  if (reportType.value === 'semua') {
-    head = [['No', 'Tanggal', 'Nama Barang', 'Satuan', 'Stok Awal', 'Total Masuk', 'Total Keluar', 'Opname', 'Sisa Stok']]
-    body = reportData.value.map((p, i) => {
-      const opS = p.opnames.map(o => `${o.tipe === 'penambahan' ? '+' : '-'}${o.stock} (${o.keterangan})`).join('\n') || '-'
-      const tanggal = new Date(p.created_at).toLocaleDateString('id-ID')
-      return [i + 1, tanggal, p.name, p.satuan, p.stock_awal, p.totalMasuk, p.totalKeluar, opS, p.stock_saat_ini]
-    })
+
+  if (reportType.value === 'semua' || reportType.value === 'menipis') {
+    // Header & Body simple untuk rekap produk
+    head = [['No', 'Nama Barang', 'Satuan', 'Masuk', 'Keluar', 'Sisa Stok']]
+    body = reportData.value.map((p, i) => [
+      i + 1, p.name, p.satuan, p.totalMasuk, p.totalKeluar, p.stock_saat_ini
+    ])
   } else {
-    const qtyLabel = reportType.value === 'masuk' ? 'Barang Masuk (+)' : 'Barang Keluar (-)'
-    head = [['No', 'Tanggal', 'Nama Barang', 'Satuan', qtyLabel]]
-    body = reportData.value.map((p, i) => {
-      const tanggal = new Date(p.created_at).toLocaleDateString('id-ID')
-      return [i + 1, tanggal, p.name, p.satuan, p.jumlah]
-    })
+    // Header & Body simple untuk transaksi
+    head = [['No', 'Tanggal', 'Nama Barang', 'Satuan', 'Jumlah']]
+    body = reportData.value.map((p, i) => [
+      i + 1, new Date(p.created_at).toLocaleDateString('id-ID'), p.name, p.satuan, p.jumlah
+    ])
   }
 
-  autoTable(doc, {
-    startY: 34,
-    head: head,
-    body: body, 
-    theme: 'grid',
-    headStyles: { fillColor: reportType.value === 'semua' ? [249, 115, 22] : (reportType.value === 'masuk' ? [34,197,94] : [239,68,68]) }, 
-    styles: { fontSize: 9 },
-  })
-  
-  doc.save(`Laporan_${reportType.value}_${startDate.value || 'Semua'}_${endDate.value || 'Sekarang'}.pdf`)
-}
-
-function exportLowStock() {
-  const lowStock = barangs.value.filter(p => p.stock_saat_ini <= 5)
-  if (!lowStock.length) { alert('Tidak ada barang dengan stok menipis.'); return }
-  const doc = new jsPDF()
-  doc.setTextColor(220, 38, 38)
-  doc.text('Laporan Stok Menipis (Stok <= 5)', 14, 15)
-  doc.setTextColor(0, 0, 0)
-  doc.setFontSize(10)
-  doc.text(`Tanggal Cetak: ${new Date().toLocaleString()}`, 14, 22)
-  autoTable(doc, {
-    startY: 30, head: [['No', 'Tanggal', 'Nama Barang', 'Sisa Stok', 'Satuan']],
-    body: lowStock.map((p, i) => {
-      const tanggal = new Date(p.created_at).toLocaleDateString('id-ID')
-      return [i + 1, tanggal, p.name, p.stock_saat_ini, p.satuan]
-    }),
-    theme: 'striped', headStyles: { fillColor: [220, 38, 38] }
-  })
-  doc.save(`Laporan_Stok_Menipis_${new Date().toISOString().split('T')[0]}.pdf`)
+  autoTable(doc, { startY: 28, head: head, body: body })
+  doc.save(`Laporan_${reportType.value}.pdf`)
 }
 
 onMounted(() => { fetchBarangs() })
@@ -167,6 +146,7 @@ onMounted(() => { fetchBarangs() })
             <option value="semua">Semua (Agregat Produk)</option>
             <option value="masuk">Barang Masuk (Transaksi)</option>
             <option value="keluar">Barang Keluar (Transaksi)</option>
+            <option value="menipis">Stok Menipis (&lt;= 5)</option>
           </select>
         </div>
         <div class="filter-group">
@@ -182,14 +162,10 @@ onMounted(() => { fetchBarangs() })
     </div>
 
     <!-- Export -->
-    <div class="export-row">
-      <button class="btn-primary" @click="exportLaporanUtama">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-        Export Laporan (PDF)
-      </button>
-      <button class="btn-danger" @click="exportLowStock">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-        Export Stok Menipis
+    <div class="export-row no-print">
+      <button class="btn-primary" @click="cetakPDF">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7"></path><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+        Cetak Laporan / Simpan PDF
       </button>
     </div>
 
@@ -201,7 +177,7 @@ onMounted(() => { fetchBarangs() })
     <div v-else class="glass-card table-card">
       <table>
         <thead>
-          <tr v-if="reportType === 'semua'">
+          <tr v-if="reportType === 'semua' || reportType === 'menipis'">
             <th>No</th>
             <th>Tanggal</th>
             <th>Nama Barang</th>
@@ -228,8 +204,8 @@ onMounted(() => { fetchBarangs() })
           </tr>
         </thead>
         <tbody>
-          <!-- Table rows for 'semua' -->
-          <template v-if="reportType === 'semua'">
+          <!-- Table rows for 'semua' & 'menipis' -->
+          <template v-if="reportType === 'semua' || reportType === 'menipis'">
             <tr v-for="(p, i) in reportData" :key="p.id">
               <td class="num-cell">{{ i + 1 }}</td>
               <td class="muted">{{ new Date(p.created_at).toLocaleDateString('id-ID') }}</td>
@@ -274,8 +250,8 @@ onMounted(() => { fetchBarangs() })
           </template>
 
           <tr v-if="!reportData.length">
-            <td :colspan="reportType === 'semua' ? 9 : 5" class="empty-cell">
-              {{ hasFilter ? '❌ Tidak ada transaksi laporan dalam rentang waktu ini.' : '📭 Belum ada data.' }}
+            <td :colspan="reportType === 'semua' || reportType === 'menipis' ? 9 : 5" class="empty-cell">
+              {{ hasFilter ? '❌ Tidak ada data laporan dalam rentang waktu ini.' : '📭 Belum ada data.' }}
             </td>
           </tr>
         </tbody>

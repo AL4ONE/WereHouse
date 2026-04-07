@@ -25,35 +25,87 @@ const formAssign = ref({ supplier_ids: [] })
 async function fetchBarangs() {
   isLoading.value = true
   try { const res = await api.get('/barangs'); barangs.value = res.data.data }
-  catch (e) { console.log(e) } finally { isLoading.value = false }
+  catch (e) { 
+    console.log(e) 
+  } 
+  finally { 
+    isLoading.value = false 
+  }
 }
 async function fetchSuppliers() {
   if (!isAdmin) return
-  try { const res = await api.get('/suppliers'); allSuppliers.value = res.data.data || [] }
-  catch (e) { console.log(e) }
+  try { 
+    const res = await api.get('/suppliers'); 
+    allSuppliers.value = res.data.data || [] 
+  }
+  catch (e) { 
+    console.log(e) 
+  }
 }
 
-function openCreate() { isEditing.value = false; isOpNaming.value = false; isAssigning.value = false; editId.value = null; form.value = { name: '', stock_awal: 0, stock_saat_ini: 0, satuan: '', supplier_ids: [] }; showModal.value = true }
-function openOpName(p) { isEditing.value = false; isOpNaming.value = true; isAssigning.value = false; editId.value = p.id; formOpName.value = { stock: 0, keterangan: '', tipe: 'pengurangan' }; showModal.value = true }
-function openAssignSupplier(p) { isEditing.value = false; isOpNaming.value = false; isAssigning.value = true; editId.value = p.id; formAssign.value = { supplier_ids: p.suppliers ? p.suppliers.map(s => s.id) : [] }; showModal.value = true }
+function openCreate() { 
+  isEditing.value = false; 
+  isOpNaming.value = false; 
+  isAssigning.value = false; 
+  editId.value = null; 
+  form.value = { name: '', stock_awal: 0, stock_saat_ini: 0, satuan: '', supplier_ids: [] }; 
+  showModal.value = true 
+}
+function openOpName(p) { 
+  isEditing.value = false; 
+  isOpNaming.value = true; 
+  isAssigning.value = false; 
+  editId.value = p.id; 
+  formOpName.value = { stock: 0, keterangan: '', tipe: 'pengurangan' }; 
+  showModal.value = true 
+}
+function openAssignSupplier(p) { 
+  isEditing.value = false; 
+  isOpNaming.value = false; 
+  isAssigning.value = true; 
+  editId.value = p.id; 
+  formAssign.value = { supplier_ids: p.suppliers ? p.suppliers.map(s => s.id) : [] }; 
+  showModal.value = true 
+}
 
 async function handleSubmit() {
   try {
-    if (isOpNaming.value) { await api.post(`/barang/${editId.value}/opName`, formOpName.value); msg.value = { text: 'Opname berhasil ditambahkan!', type: 'ok' } }
-    else if (isAssigning.value) { await api.post(`/barang/${editId.value}/suppliers`, formAssign.value); msg.value = { text: 'Supplier berhasil di-assign!', type: 'ok' } }
-    else if (isEditing.value) { await api.post(`/barang/${editId.value}`, form.value); msg.value = { text: 'Barang diupdate!', type: 'ok' } }
-    else { await api.post('/barang', form.value); msg.value = { text: 'Barang ditambahkan!', type: 'ok' } }
+    if (isOpNaming.value) { 
+      await api.post(`/barang/${editId.value}/opName`, formOpName.value); 
+      msg.value = { text: 'Opname berhasil ditambahkan!', type: 'ok' } 
+    }
+    else if (isAssigning.value) { 
+      await api.post(`/barang/${editId.value}/suppliers`, formAssign.value); 
+      msg.value = { text: 'Supplier berhasil di-assign!', type: 'ok' } 
+    }
+    else if (isEditing.value) { 
+      await api.post(`/barang/${editId.value}`, form.value); 
+      msg.value = { text: 'Barang diupdate!', type: 'ok' } 
+    }
+    else { 
+      await api.post('/barang', form.value); 
+      msg.value = { text: 'Barang ditambahkan!', type: 'ok' } 
+    }
     showModal.value = false; fetchBarangs()
   } catch (e) { console.log(e) }
 }
 
 async function handleDelete(id) {
   if (!confirm('Hapus barang ini?')) return
-  try { await api.delete(`/barang/${id}`); msg.value = { text: 'Barang dihapus!', type: 'ok' }; fetchBarangs() }
-  catch (e) { console.log(e) }
+  try { 
+    await api.delete(`/barang/${id}`); 
+    msg.value = { text: 'Barang dihapus!', type: 'ok' }; 
+    fetchBarangs() 
+  }
+  catch (e) { 
+    console.log(e) 
+  }
 }
 
-onMounted(() => { fetchBarangs(); fetchSuppliers() })
+onMounted(() => { 
+  fetchBarangs(); 
+  fetchSuppliers() 
+})
 </script>
 
 <template>

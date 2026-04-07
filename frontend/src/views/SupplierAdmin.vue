@@ -10,7 +10,13 @@ const msg = ref({ text: '', type: '' })
 const isLoading = ref(false)
 
 async function fetchBarangs() {
-  try { const res = await api.get('/barangs'); barangs.value = res.data.data } catch (e) { console.log(e) }
+  try { 
+    const res = await api.get('/barangs'); 
+    barangs.value = res.data.data 
+  } 
+  catch (e) { 
+    console.log(e) 
+  }
 }
 
 async function handleSubmit() {
@@ -20,11 +26,18 @@ async function handleSubmit() {
     await api.post('/supplier', form.value)
     msg.value = { text: 'Supplier berhasil ditambahkan!', type: 'ok' }
     form.value = { name: '', email: '', phone: 0, barang_ids: [] }
-  } catch (e) { console.log(e) }
-  finally { isLoading.value = false }
+  } 
+  catch (e) { 
+    console.log(e) 
+  }
+  finally { 
+    isLoading.value = false 
+  }
 }
 
-onMounted(() => { fetchBarangs() })
+onMounted(() => { 
+  fetchBarangs() 
+})
 </script>
 
 <template>

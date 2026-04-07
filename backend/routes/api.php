@@ -37,12 +37,15 @@ Route::middleware(AuthMiddleware::class)->group(function () {
         Route::get("suppliers", [SupplierController::class, "index"]);
 
         Route::post("/inventoryIn", [BarangMasukController::class, "in"]);
+        Route::post("/inventoryIn/{id}", [BarangMasukController::class, "update"]);
+        Route::delete("/inventoryIn/{id}", [BarangMasukController::class, "destroy"]);
+        Route::get("/inventoryIn", [BarangMasukController::class, "index"]);
+        
         Route::post("/inventoryOut", [BarangKeluarController::class, "out"]);
+        Route::get("/inventoryOut", [BarangKeluarController::class, "index"]);
+
         Route::post("barang/{id}", [BarangController::class, "update"]);
         Route::post("barang/{id}/opName", [BarangController::class, "addOpName"]);
         Route::get("barang/opName", [BarangController::class, "opName"]);
-
-        Route::get("/inventoryIn", [BarangMasukController::class, "index"]);
-        Route::get("/inventoryOut", [BarangKeluarController::class, "index"]);
     });
 });

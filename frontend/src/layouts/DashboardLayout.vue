@@ -120,7 +120,7 @@ onBeforeUnmount(() => {
         <div class="nav-divider"></div>
 
         <div class="user-area">
-          <div class="user-avatar">{{ userName.charAt(0).toUpperCase() }}</div>
+          <div class="user-avatar">{{ userName.charAt(0)}}</div>
           <div class="user-info">
             <span class="user-name">{{ userName }}</span>
             <span class="user-role">{{ userRole }}</span>
