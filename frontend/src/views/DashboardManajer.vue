@@ -50,10 +50,12 @@ const reportData = computed(() => {
     const mapped = filtered.map(p => {
       const filteredMasuk = (p.barang_masuks || []).filter(item => isDateInRange(item.created_at))
       const filteredKeluar = (p.barang_keluars || []).filter(item => isDateInRange(item.created_at))
-      const opnames = p.status_op_names || []
+      const opnames = (p.status_op_names || []).filter(item => isDateInRange(item.created_at))
       const totalMasuk = filteredMasuk.reduce((sum, item) => sum + item.stock, 0)
       const totalKeluar = filteredKeluar.reduce((sum, item) => sum + item.stock, 0)
-      return { ...p, totalMasuk, totalKeluar, opnames }
+      const totalOpnamePlus = opnames.filter(o => o.tipe === 'penambahan').reduce((sum, o) => sum + o.stock, 0)
+      const totalOpnameMinus = opnames.filter(o => o.tipe === 'pengurangan').reduce((sum, o) => sum + o.stock, 0)
+      return { ...p, totalMasuk, totalKeluar, opnames, totalOpnamePlus, totalOpnameMinus }
     })
 
     if (reportType.value === 'menipis') {
@@ -63,18 +65,24 @@ const reportData = computed(() => {
   } else if (reportType.value === 'masuk') {
     let list = []
     barangs.value.forEach(p => {
+      const opnames = (p.status_op_names || []).filter(item => isDateInRange(item.created_at))
+      const totalOpPlus = opnames.filter(o => o.tipe === 'penambahan').reduce((s, o) => s + o.stock, 0)
+      const totalOpMinus = opnames.filter(o => o.tipe === 'pengurangan').reduce((s, o) => s + o.stock, 0)
       const masukList = (p.barang_masuks || []).filter(item => isDateInRange(item.created_at))
       masukList.forEach(item => {
-        list.push({ id: item.id, created_at: item.created_at, name: p.name, satuan: p.satuan, jumlah: item.stock })
+        list.push({ id: item.id, created_at: item.created_at, name: p.name, satuan: p.satuan, jumlah: item.stock, opnames, totalOpPlus, totalOpMinus, stock_saat_ini: p.stock_saat_ini })
       })
     })
     return list.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
   } else if (reportType.value === 'keluar') {
     let list = []
     barangs.value.forEach(p => {
+      const opnames = (p.status_op_names || []).filter(item => isDateInRange(item.created_at))
+      const totalOpPlus = opnames.filter(o => o.tipe === 'penambahan').reduce((s, o) => s + o.stock, 0)
+      const totalOpMinus = opnames.filter(o => o.tipe === 'pengurangan').reduce((s, o) => s + o.stock, 0)
       const keluarList = (p.barang_keluars || []).filter(item => isDateInRange(item.created_at))
       keluarList.forEach(item => {
-        list.push({ id: item.id, created_at: item.created_at, name: p.name, satuan: p.satuan, jumlah: item.stock })
+        list.push({ id: item.id, created_at: item.created_at, name: p.name, satuan: p.satuan, jumlah: item.stock, opnames, totalOpPlus, totalOpMinus, stock_saat_ini: p.stock_saat_ini })
       })
     })
     return list.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
@@ -88,32 +96,41 @@ function resetFilter() {
   reportType.value = 'semua'
 }
 
-// Fungsi print PDF dengan jsPDF yang sangat simpel (tanpa logic ribet)
 function cetakPDF() {
-  const doc = new jsPDF()
+  const doc = new jsPDF({ orientation: 'landscape' })
   
   doc.text('Laporan Inventori Gudang', 14, 15)
   doc.setFontSize(10)
   doc.text(`Filter: ${reportType.value.toUpperCase()}`, 14, 22)
+  if (startDate.value || endDate.value) {
+    doc.text(`Periode: ${startDate.value || '...'} s/d ${endDate.value || '...'}`, 14, 28)
+  }
 
-  let head = []
-  let body = []
+  const startY = (startDate.value || endDate.value) ? 34 : 28
+  let tableHead = []
+  let tableBody = []
 
   if (reportType.value === 'semua' || reportType.value === 'menipis') {
-    // Header & Body simple untuk rekap produk
-    head = [['No', 'Nama Barang', 'Satuan', 'Masuk', 'Keluar', 'Sisa Stok']]
-    body = reportData.value.map((p, i) => [
-      i + 1, p.name, p.satuan, p.totalMasuk, p.totalKeluar, p.stock_saat_ini
+    tableHead = [['No', 'Nama Barang', 'Satuan', 'Stok Awal', 'Masuk', 'Keluar', 'Opname (+)', 'Opname (-)', 'Sisa Stok']]
+    tableBody = reportData.value.map((p, i) => [
+      i + 1, p.name, p.satuan, p.stock_awal, `+${p.totalMasuk}`, `-${p.totalKeluar}`, 
+      p.totalOpnamePlus ? `+${p.totalOpnamePlus}` : '-', 
+      p.totalOpnameMinus ? `-${p.totalOpnameMinus}` : '-',
+      p.stock_saat_ini
     ])
   } else {
-    // Header & Body simple untuk transaksi
-    head = [['No', 'Tanggal', 'Nama Barang', 'Satuan', 'Jumlah']]
-    body = reportData.value.map((p, i) => [
-      i + 1, new Date(p.created_at).toLocaleDateString('id-ID'), p.name, p.satuan, p.jumlah
+    const label = reportType.value === 'masuk' ? 'Masuk' : 'Keluar'
+    tableHead = [['No', 'Tanggal', 'Nama Barang', 'Satuan', `Jumlah ${label}`, 'Opname (+)', 'Opname (-)', 'Sisa Stok']]
+    tableBody = reportData.value.map((p, i) => [
+      i + 1, new Date(p.created_at).toLocaleDateString('id-ID'), p.name, p.satuan, 
+      reportType.value === 'masuk' ? `+${p.jumlah}` : `-${p.jumlah}`,
+      p.totalOpPlus ? `+${p.totalOpPlus}` : '-',
+      p.totalOpMinus ? `-${p.totalOpMinus}` : '-',
+      p.stock_saat_ini
     ])
   }
 
-  autoTable(doc, { startY: 28, head: head, body: body })
+  autoTable(doc, { startY, head: tableHead, body: tableBody })
   doc.save(`Laporan_${reportType.value}.pdf`)
 }
 
@@ -123,15 +140,12 @@ onMounted(() => { fetchBarangs() })
 <template>
   <DashboardLayout :navLinks="navLinks">
     <div class="hero">
-      <h1>Dashboard <span class="gradient-text">Manager</span> 📊</h1>
-      <p>Laporan lengkap produk: stok, transaksi, dan opname.</p>
+      <h1>Dashboard <span class="gradient-text">Manager</span></h1>
     </div>
 
-    <!-- Filter Card -->
     <div class="glass-card filter-card">
       <div class="filter-top">
         <div class="filter-title">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
           <strong>Filter Laporan</strong>
         </div>
         <button class="btn-ghost" @click="resetFilter" v-if="hasFilter">
@@ -143,10 +157,10 @@ onMounted(() => { fetchBarangs() })
         <div class="filter-group">
           <label>Jenis Laporan</label>
           <select v-model="reportType">
-            <option value="semua">Semua (Agregat Produk)</option>
-            <option value="masuk">Barang Masuk (Transaksi)</option>
-            <option value="keluar">Barang Keluar (Transaksi)</option>
-            <option value="menipis">Stok Menipis (&lt;= 5)</option>
+            <option value="semua">Semua</option>
+            <option value="masuk">Barang Masuk</option>
+            <option value="keluar">Barang Keluar</option>
+            <option value="menipis">Stok Menipis</option>
           </select>
         </div>
         <div class="filter-group">
@@ -158,10 +172,9 @@ onMounted(() => { fetchBarangs() })
           <input type="date" v-model="endDate" />
         </div>
       </div>
-      <p v-if="hasFilter" class="filter-info">📋 Menampilkan data laporan berdasarkan filter yang terpilih.</p>
+      <p v-if="hasFilter" class="filter-info">Menampilkan data laporan berdasarkan filter yang terpilih.</p>
     </div>
 
-    <!-- Export -->
     <div class="export-row no-print">
       <button class="btn-primary" @click="cetakPDF">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7"></path><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
@@ -169,7 +182,6 @@ onMounted(() => { fetchBarangs() })
       </button>
     </div>
 
-    <!-- Table -->
     <div v-if="isLoading" class="loading-state">
       <div class="spinner-lg"></div>
       <span>Memuat data laporan...</span>
@@ -194,6 +206,9 @@ onMounted(() => { fetchBarangs() })
             <th>Nama Barang</th>
             <th>Satuan</th>
             <th>Total Masuk (+)</th>
+            <th>Opname (+)</th>
+            <th>Opname (-)</th>
+            <th>Sisa Stok</th>
           </tr>
           <tr v-else-if="reportType === 'keluar'">
             <th>No</th>
@@ -201,10 +216,12 @@ onMounted(() => { fetchBarangs() })
             <th>Nama Barang</th>
             <th>Satuan</th>
             <th>Total Keluar (-)</th>
+            <th>Opname (+)</th>
+            <th>Opname (-)</th>
+            <th>Sisa Stok</th>
           </tr>
         </thead>
         <tbody>
-          <!-- Table rows for 'semua' & 'menipis' -->
           <template v-if="reportType === 'semua' || reportType === 'menipis'">
             <tr v-for="(p, i) in reportData" :key="p.id">
               <td class="num-cell">{{ i + 1 }}</td>
@@ -227,7 +244,6 @@ onMounted(() => { fetchBarangs() })
             </tr>
           </template>
 
-          <!-- Table rows for 'masuk' -->
           <template v-if="reportType === 'masuk'">
             <tr v-for="(p, i) in reportData" :key="'masuk-'+p.id">
               <td class="num-cell">{{ i + 1 }}</td>
@@ -235,10 +251,11 @@ onMounted(() => { fetchBarangs() })
               <td class="name-cell">{{ p.name }}</td>
               <td>{{ p.satuan }}</td>
               <td class="num-cell ok">+{{ p.jumlah }}</td>
+              <td class="num-cell" :class="p.totalOpPlus ? 'ok' : ''">{{ p.totalOpPlus ? `+${p.totalOpPlus}` : '-' }}</td>
+              <td class="num-cell" :class="p.totalOpMinus ? 'err' : ''">{{ p.totalOpMinus ? `-${p.totalOpMinus}` : '-' }}</td>
+              <td class="num-cell sisa" :class="p.stock_saat_ini <= 5 ? 'err' : 'ok-bold'">{{ p.stock_saat_ini }}</td>
             </tr>
           </template>
-
-          <!-- Table rows for 'keluar' -->
           <template v-if="reportType === 'keluar'">
             <tr v-for="(p, i) in reportData" :key="'keluar-'+p.id">
               <td class="num-cell">{{ i + 1 }}</td>
@@ -246,12 +263,15 @@ onMounted(() => { fetchBarangs() })
               <td class="name-cell">{{ p.name }}</td>
               <td>{{ p.satuan }}</td>
               <td class="num-cell err">-{{ p.jumlah }}</td>
+              <td class="num-cell" :class="p.totalOpPlus ? 'ok' : ''">{{ p.totalOpPlus ? `+${p.totalOpPlus}` : '-' }}</td>
+              <td class="num-cell" :class="p.totalOpMinus ? 'err' : ''">{{ p.totalOpMinus ? `-${p.totalOpMinus}` : '-' }}</td>
+              <td class="num-cell sisa" :class="p.stock_saat_ini <= 5 ? 'err' : 'ok-bold'">{{ p.stock_saat_ini }}</td>
             </tr>
           </template>
 
           <tr v-if="!reportData.length">
-            <td :colspan="reportType === 'semua' || reportType === 'menipis' ? 9 : 5" class="empty-cell">
-              {{ hasFilter ? '❌ Tidak ada data laporan dalam rentang waktu ini.' : '📭 Belum ada data.' }}
+            <td :colspan="reportType === 'semua' || reportType === 'menipis' ? 9 : 8" class="empty-cell">
+              {{ hasFilter ? 'Tidak ada data laporan dalam rentang waktu ini.' : 'Belum ada data.' }}
             </td>
           </tr>
         </tbody>
@@ -269,7 +289,6 @@ onMounted(() => { fetchBarangs() })
 }
 .hero p { font-size: 15px; color: var(--text-muted); }
 
-/* Glass Card */
 .glass-card {
   background: var(--bg-surface);
   border: 1px solid var(--border-default);

@@ -7,22 +7,19 @@ import { petugasNavLinks as navLinks } from '@/config/navLinks'
   <DashboardLayout :navLinks="navLinks">
     <div class="hero">
       <div class="hero-text">
-        <h1>Selamat Datang, <span class="gradient-text">Petugas</span> 👋</h1>
-        <p>Catat transaksi barang masuk dan keluar dari sini.</p>
+        <h1>Selamat Datang, <span class="gradient-text">Petugas</span></h1>
       </div>
     </div>
 
     <div class="cards">
       <router-link to="/Petugas/barang-masuk" class="card">
         <div class="card-glow green"></div>
-        <div class="card-icon-wrap green">📥</div>
         <span class="card-label">Barang Masuk</span>
         <span class="card-desc">Catat stok masuk dari supplier</span>
         <span class="card-arrow">→</span>
       </router-link>
       <router-link to="/Petugas/barang-keluar" class="card">
         <div class="card-glow orange"></div>
-        <div class="card-icon-wrap orange">📤</div>
         <span class="card-label">Barang Keluar</span>
         <span class="card-desc">Catat stok keluar ke tujuan</span>
         <span class="card-arrow">→</span>

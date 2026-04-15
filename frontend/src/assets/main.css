@@ -7,7 +7,6 @@
 }
 
 :root {
-  /* Dark + Orange + White Theme */
   --bg-base: #0f0f0f;
   --bg-surface: #1a1a1a;
   --bg-elevated: #222222;
@@ -24,7 +23,7 @@
   --accent: #f97316;
   --accent-bold: #ea580c;
   --accent-hover: #dc4e08;
-  --accent-light: #fb923c;
+  --accent-light: #f97316;
   --accent-glow: rgba(249, 115, 22, 0.25);
 
   --success: #22c55e;

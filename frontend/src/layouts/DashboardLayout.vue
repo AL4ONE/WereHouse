@@ -24,7 +24,6 @@ function isActive(path) {
   return route.path === path
 }
 
-// ===== Notification Bell =====
 const barangs = ref([])
 const showNotifDropdown = ref(false)
 const notifRef = ref(null)
@@ -67,8 +66,7 @@ onBeforeUnmount(() => {
     <nav class="topnav">
       <div class="nav-left">
         <router-link :to="navLinks[0]?.path || '/'" class="brand">
-          <div class="brand-icon">📦</div>
-          <span class="brand-text">USK<strong>Gudang</strong></span>
+          <span class="brand-text">Ware<strong>House</strong></span>
         </router-link>
         <div class="nav-divider"></div>
         <div class="nav-links">
@@ -84,7 +82,6 @@ onBeforeUnmount(() => {
         </div>
       </div>
       <div class="nav-right">
-        <!-- Notification Bell -->
         <div class="notif-wrapper" ref="notifRef">
           <button class="btn-icon" @click="toggleNotif" title="Notifikasi Stok Menipis">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -97,12 +94,10 @@ onBeforeUnmount(() => {
           <transition name="dd">
             <div v-if="showNotifDropdown" class="notif-dropdown">
               <div class="dd-header">
-                <span>🔔 Notifikasi Stok</span>
+                <span>Notifikasi Stok</span>
                 <span class="dd-count" v-if="lowStockItems.length">{{ lowStockItems.length }}</span>
               </div>
-              <div v-if="lowStockItems.length === 0" class="dd-empty">
-                <span class="dd-empty-icon">✅</span>
-                <span>Semua stok aman!</span>
+              <div v-if="lowStockItems.length === 0" class="dd-empty"><span>Semua stok aman!</span>
               </div>
               <div v-else class="dd-list">
                 <div v-for="item in lowStockItems" :key="item.id" class="dd-item">
@@ -128,7 +123,7 @@ onBeforeUnmount(() => {
         </div>
 
         <button @click="handleLogout" class="btn-logout" title="Logout">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          Logout
         </button>
       </div>
     </nav>
@@ -375,7 +370,7 @@ onBeforeUnmount(() => {
 }
 
 .btn-logout {
-  width: 38px; height: 38px;
+  width: 60px; height: 38px;
   background: var(--danger-bg);
   border: 1px solid rgba(251,113,133,0.15);
   border-radius: 10px;

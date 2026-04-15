@@ -18,7 +18,7 @@ const isOpNaming = ref(false)
 const isAssigning = ref(false)
 const editId = ref(null)
 const msg = ref({ text: '', type: '' })
-const form = ref({ name: '', stock_awal: 0, stock_saat_ini: 0, satuan: '', supplier_ids: [] })
+const form = ref({ name: '', stock: 0, satuan: '', supplier_ids: [] })
 const formOpName = ref({ stock: 0, keterangan: '', tipe: '' })
 const formAssign = ref({ supplier_ids: [] })
 
@@ -48,7 +48,7 @@ function openCreate() {
   isOpNaming.value = false; 
   isAssigning.value = false; 
   editId.value = null; 
-  form.value = { name: '', stock_awal: 0, stock_saat_ini: 0, satuan: '', supplier_ids: [] }; 
+  form.value = { name: '', stock: 0, satuan: '', supplier_ids: [] }; 
   showModal.value = true 
 }
 function openOpName(p) { 
@@ -83,7 +83,8 @@ async function handleSubmit() {
       msg.value = { text: 'Barang diupdate!', type: 'ok' } 
     }
     else { 
-      await api.post('/barang', form.value); 
+      const payload = { name: form.value.name, stock_awal: form.value.stock, stock_saat_ini: form.value.stock, satuan: form.value.satuan, supplier_ids: form.value.supplier_ids }
+      await api.post('/barang', payload); 
       msg.value = { text: 'Barang ditambahkan!', type: 'ok' } 
     }
     showModal.value = false; fetchBarangs()
@@ -112,13 +113,14 @@ onMounted(() => {
   <DashboardLayout :navLinks="navLinks">
     <div class="top-row">
       <div>
-        <h1 class="page-title">📦 Data <span class="gradient-text">Barang</span></h1>
-        <p class="page-desc">Kelola semua produk di gudang</p>
+        <h1 class="page-title">Data <span class="gradient-text">Barang</span></h1>
       </div>
-      <button class="btn-primary" @click="openCreate">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        Tambah Barang
-      </button>
+      <div v-if="isAdmin">
+        <button class="btn-primary" @click="openCreate">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Tambah Barang
+        </button>
+      </div>
     </div>
 
     <div v-if="msg.text" class="alert" :class="msg.type">{{ msg.text }}</div>
@@ -195,8 +197,7 @@ onMounted(() => {
 
           <form v-else @submit.prevent="handleSubmit">
             <div class="field"><label>Nama Barang</label><input v-model="form.name" placeholder="Nama produk" required /></div>
-            <div class="field"><label>Stock Awal</label><input v-model.number="form.stock_awal" type="number" min="0" required /></div>
-            <div class="field"><label>Stock Saat Ini</label><input v-model.number="form.stock_saat_ini" type="number" min="0" required /></div>
+            <div class="field"><label>Stock</label><input v-model.number="form.stock" type="number" min="0" required /></div>
             <div class="field"><label>Satuan</label><input v-model="form.satuan" placeholder="pcs, kg, liter, dll" required /></div>
             <div v-if="isAdmin" class="field"><label>Supplier (opsional)</label>
               <div class="checkbox-group"><label v-for="sup in allSuppliers" :key="sup.id" class="checkbox-item"><input type="checkbox" :value="sup.id" v-model="form.supplier_ids" /><span>{{ sup.name }}</span></label></div>

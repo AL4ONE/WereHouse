@@ -100,8 +100,7 @@ onMounted(() => {
 <template>
   <DashboardLayout :navLinks="navLinks">
     <div class="hero">
-      <h1>📥 Barang <span class="gradient-text">Masuk</span></h1>
-      <p>Kelola pencatatan barang masuk ke gudang dari supplier</p>
+      <h1>Barang <span class="gradient-text">Masuk</span></h1>
     </div>
 
     <div v-if="msg.text" class="alert" :class="msg.type">
@@ -112,7 +111,7 @@ onMounted(() => {
     <div class="content-grid">
       <!-- Form Section -->
       <div class="glass-card form-card">
-        <h3 class="card-title">{{ editId ? '✏️ Edit Barang Masuk' : '➕ Tambah Barang Masuk' }}</h3>
+        <h3 class="card-title">{{ editId ? 'Edit Barang Masuk' : 'Tambah Barang Masuk' }}</h3>
         <form @submit.prevent="handleSubmit">
           <div class="field">
             <label>Produk</label>
@@ -146,7 +145,7 @@ onMounted(() => {
 
       <!-- Table Section -->
       <div class="glass-card table-section">
-        <h3 class="card-title">📋 Riwayat Barang Masuk</h3>
+        <h3 class="card-title">Riwayat Barang Masuk</h3>
         <div class="table-container">
           <table class="inventory-table">
             <thead>

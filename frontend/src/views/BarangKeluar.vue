@@ -48,8 +48,7 @@ onMounted(() => {
 <template>
   <DashboardLayout :navLinks="navLinks">
     <div class="hero">
-      <h1>📤 Barang <span class="gradient-text">Keluar</span></h1>
-      <p>Catat barang keluar dari gudang ke tujuan</p>
+      <h1>Barang <span class="gradient-text">Keluar</span></h1>
     </div>
 
     <div v-if="msg.text" class="alert" :class="msg.type">

@@ -15,7 +15,6 @@ const router = createRouter({
       redirect: '/login'
     },
 
-    // ===== Dashboard per-role =====
     {
       path: '/dashboard/Manajer',
       name: 'dashboard-Manajer',
@@ -35,7 +34,6 @@ const router = createRouter({
       meta: { requiresAuth: true, role: 'Petugas' }
     },
 
-    // ===== Shared views (Admin + Petugas pakai component yang sama) =====
     {
       path: '/Petugas/barang-masuk',
       name: 'Petugas-barang-masuk',

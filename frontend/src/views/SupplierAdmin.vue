@@ -43,7 +43,7 @@ onMounted(() => {
 <template>
   <DashboardLayout :navLinks="navLinks">
     <div class="hero">
-      <h1>🚚 Tambah <span class="gradient-text">Supplier</span></h1>
+      <h1>Tambah <span class="gradient-text">Supplier</span></h1>
       <p>Daftarkan supplier baru ke sistem</p>
     </div>
 

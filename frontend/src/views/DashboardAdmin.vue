@@ -7,36 +7,30 @@ import { adminNavLinks as navLinks } from '@/config/navLinks'
   <DashboardLayout :navLinks="navLinks">
     <div class="hero">
       <div class="hero-text">
-        <h1>Selamat Datang, <span class="gradient-text">Admin</span> 👋</h1>
-        <p>Kelola produk, supplier, dan transaksi gudangmu dari sini.</p>
+        <h1>Selamat Datang, <span class="gradient-text">Admin</span></h1>
       </div>
     </div>
 
     <div class="cards">
       <router-link to="/Admin/barangs" class="card">
-        <div class="card-glow c1"></div>
-        <div class="card-icon-wrap c1">📦</div>
-        <span class="card-label">Produk</span>
+        <div class="card-glow c1"></div><span class="card-label">Produk</span>
         <span class="card-desc">Kelola data barang</span>
         <span class="card-arrow">→</span>
       </router-link>
       <router-link to="/Admin/suppliers" class="card">
         <div class="card-glow c2"></div>
-        <div class="card-icon-wrap c2">🚚</div>
         <span class="card-label">Supplier</span>
         <span class="card-desc">Atur data supplier</span>
         <span class="card-arrow">→</span>
       </router-link>
       <router-link to="/Admin/barang-masuk" class="card">
         <div class="card-glow c3"></div>
-        <div class="card-icon-wrap c3">📥</div>
         <span class="card-label">Barang Masuk</span>
         <span class="card-desc">Catat stok masuk</span>
         <span class="card-arrow">→</span>
       </router-link>
       <router-link to="/Admin/barang-keluar" class="card">
         <div class="card-glow c4"></div>
-        <div class="card-icon-wrap c4">📤</div>
         <span class="card-label">Barang Keluar</span>
         <span class="card-desc">Catat stok keluar</span>
         <span class="card-arrow">→</span>
@@ -57,7 +51,7 @@ import { adminNavLinks as navLinks } from '@/config/navLinks'
   margin-bottom: 6px;
 }
 .gradient-text {
-  background: linear-gradient(135deg, var(--accent), #f59e0b);
+  background: linear-gradient(135deg, var(--accent), #f97316);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -104,8 +98,8 @@ import { adminNavLinks as navLinks } from '@/config/navLinks'
   transition: opacity 0.4s;
 }
 .card-glow.c1 { background: #f97316; }
-.card-glow.c2 { background: #f59e0b; }
-.card-glow.c3 { background: #22c55e; }
+.card-glow.c2 { background: #f97316; }
+.card-glow.c3 { background: #f97316; }
 .card-glow.c4 { background: #f97316; }
 
 .card-icon-wrap {
@@ -118,8 +112,8 @@ import { adminNavLinks as navLinks } from '@/config/navLinks'
   margin-bottom: 12px;
 }
 .card-icon-wrap.c1 { background: rgba(249,115,22,0.12); }
-.card-icon-wrap.c2 { background: rgba(245,158,11,0.12); }
-.card-icon-wrap.c3 { background: rgba(34,197,94,0.12); }
+.card-icon-wrap.c2 { background: rgba(249,115,22,0.12); }
+.card-icon-wrap.c3 { background: rgba(249,115,22,0.12); }
 .card-icon-wrap.c4 { background: rgba(249,115,22,0.12); }
 
 .card-label {
