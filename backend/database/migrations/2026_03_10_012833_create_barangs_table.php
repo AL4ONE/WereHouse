@@ -13,10 +13,13 @@ return new class extends Migration
     {
         Schema::create('barangs', function (Blueprint $table) {
             $table->id();
+            $table->string("kode_barang")->unique();
             $table->string("name");
             $table->integer("stock_awal");
             $table->integer("stock_saat_ini");
             $table->string("satuan");
+            $table->decimal("harga", 15, 2)->default(0);
+            $table->integer("min_stock")->default(0);
             $table->timestamps();
         });
     }

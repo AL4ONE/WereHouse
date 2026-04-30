@@ -1,5 +1,6 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, nextTick } from 'vue'
+import JsBarcode from 'jsbarcode'
 import api from '@/api'
 import DashboardLayout from '@/layouts/DashboardLayout.vue'
 import { useAuthStore } from '@/stores/auth'
@@ -18,13 +19,39 @@ const isOpNaming = ref(false)
 const isAssigning = ref(false)
 const editId = ref(null)
 const msg = ref({ text: '', type: '' })
-const form = ref({ name: '', stock: 0, satuan: '', supplier_ids: [] })
+const form = ref({ kode_barang: '', name: '', stock: 0, satuan: '', harga: 0, min_stock: 0, supplier_ids: [] })
+const showBarcodeModal = ref(false)
+const selectedBarcode = ref('')
 const formOpName = ref({ stock: 0, keterangan: '', tipe: '' })
 const formAssign = ref({ supplier_ids: [] })
 
 async function fetchBarangs() {
   isLoading.value = true
-  try { const res = await api.get('/barangs'); barangs.value = res.data.data }
+  try { 
+    const res = await api.get('/products'); 
+    barangs.value = res.data.data 
+    nextTick(() => {
+      setTimeout(() => {
+        barangs.value.forEach(p => {
+          if (p.kode_barang) {
+            try {
+              JsBarcode("#barcode-" + p.id, p.kode_barang, {
+                format: "CODE128",
+                lineColor: "#111",
+                width: 1,
+                height: 25,
+                displayValue: true,
+                fontSize: 10,
+                margin: 2
+              })
+            } catch(e) {
+              console.error("Barcode error for " + p.kode_barang, e)
+            }
+          }
+        })
+      }, 100)
+    })
+  }
   catch (e) { 
     console.log(e) 
   } 
@@ -48,8 +75,24 @@ function openCreate() {
   isOpNaming.value = false; 
   isAssigning.value = false; 
   editId.value = null; 
-  form.value = { name: '', stock: 0, satuan: '', supplier_ids: [] }; 
+  form.value = { kode_barang: '', name: '', stock: 0, satuan: '', harga: 0, min_stock: 0, supplier_ids: [] }; 
   showModal.value = true 
+}
+function openEdit(p) {
+  isEditing.value = true;
+  isOpNaming.value = false;
+  isAssigning.value = false;
+  editId.value = p.id;
+  form.value = { 
+    kode_barang: p.kode_barang, 
+    name: p.name, 
+    stock: p.stock_saat_ini, 
+    satuan: p.satuan, 
+    harga: p.harga, 
+    min_stock: p.min_stock || 0,
+    supplier_ids: p.suppliers ? p.suppliers.map(s => s.id) : [] 
+  };
+  showModal.value = true
 }
 function openOpName(p) { 
   isEditing.value = false; 
@@ -71,20 +114,20 @@ function openAssignSupplier(p) {
 async function handleSubmit() {
   try {
     if (isOpNaming.value) { 
-      await api.post(`/barang/${editId.value}/opName`, formOpName.value); 
+      await api.post(`/products/${editId.value}/op-name`, formOpName.value); 
       msg.value = { text: 'Opname berhasil ditambahkan!', type: 'ok' } 
     }
     else if (isAssigning.value) { 
-      await api.post(`/barang/${editId.value}/suppliers`, formAssign.value); 
+      await api.post(`/products/${editId.value}/suppliers`, formAssign.value); 
       msg.value = { text: 'Supplier berhasil di-assign!', type: 'ok' } 
     }
     else if (isEditing.value) { 
-      await api.post(`/barang/${editId.value}`, form.value); 
+      await api.post(`/products/${editId.value}`, form.value); 
       msg.value = { text: 'Barang diupdate!', type: 'ok' } 
     }
     else { 
-      const payload = { name: form.value.name, stock_awal: form.value.stock, stock_saat_ini: form.value.stock, satuan: form.value.satuan, supplier_ids: form.value.supplier_ids }
-      await api.post('/barang', payload); 
+      const payload = { kode_barang: form.value.kode_barang, name: form.value.name, stock_awal: form.value.stock, stock_saat_ini: form.value.stock, satuan: form.value.satuan, harga: form.value.harga, min_stock: form.value.min_stock, supplier_ids: form.value.supplier_ids }
+      await api.post('/products', payload); 
       msg.value = { text: 'Barang ditambahkan!', type: 'ok' } 
     }
     showModal.value = false; fetchBarangs()
@@ -94,7 +137,7 @@ async function handleSubmit() {
 async function handleDelete(id) {
   if (!confirm('Hapus barang ini?')) return
   try { 
-    await api.delete(`/barang/${id}`); 
+    await api.delete(`/products/${id}`); 
     msg.value = { text: 'Barang dihapus!', type: 'ok' }; 
     fetchBarangs() 
   }
@@ -107,6 +150,31 @@ onMounted(() => {
   fetchBarangs(); 
   fetchSuppliers() 
 })
+function formatRupiah(n) {
+  return 'Rp ' + Number(n).toLocaleString('id-ID')
+}
+
+function openBarcode(code) {
+  selectedBarcode.value = code
+  showBarcodeModal.value = true
+  nextTick(() => {
+    JsBarcode("#barcodeCanvas", code, {
+      format: "CODE128",
+      lineColor: "#111",
+      width: 2,
+      height: 60,
+      displayValue: true
+    })
+  })
+}
+
+function printBarcode() {
+  const svg = document.getElementById('barcodeCanvas').outerHTML
+  const win = window.open('', '', 'width=600,height=400')
+  win.document.write(`<html><body style="display:flex;justify-content:center;align-items:center;height:100vh;margin:0;">${svg}</body></html>`)
+  win.document.close()
+  setTimeout(() => { win.print(); win.close(); }, 500)
+}
 </script>
 
 <template>
@@ -133,19 +201,25 @@ onMounted(() => {
       <table v-else>
         <thead>
           <tr>
-            <th>No</th><th>Nama Barang</th><th>Stok Awal</th><th>Stok Saat Ini</th><th>Satuan</th>
+            <th>No</th><th>Kode</th><th>Nama Barang</th><th>Stok Awal</th><th>Stok Saat Ini</th><th>Min Stok</th><th>Satuan</th><th>Harga</th>
             <th v-if="isAdmin">Supplier</th><th>Riwayat Opname</th><th>Aksi</th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="(p, i) in barangs" :key="p.id">
             <td class="num-cell">{{ i + 1 }}</td>
+            <td class="name-cell text-center">
+              <svg v-if="p.kode_barang" :id="'barcode-' + p.id" class="inline-barcode"></svg>
+              <span v-else class="muted">Belum ada</span>
+            </td>
             <td class="name-cell">{{ p.name }}</td>
             <td class="num-cell">{{ p.stock_awal }}</td>
-            <td class="num-cell" :class="p.stock_saat_ini <= 5 ? 'err' : 'ok'">
-              <span class="stock-pill" :class="p.stock_saat_ini <= 5 ? 'low' : ''">{{ p.stock_saat_ini }}</span>
+            <td class="num-cell">
+              <span class="stock-pill" :class="p.stock_saat_ini <= p.min_stock ? 'low' : ''">{{ p.stock_saat_ini }}</span>
             </td>
+            <td class="num-cell"><span class="badge-min">{{ p.min_stock }}</span></td>
             <td>{{ p.satuan }}</td>
+            <td class="num-cell">{{ formatRupiah(p.harga || 0) }}</td>
             <td v-if="isAdmin">
               <span v-if="p.suppliers?.length" class="badge-row">
                 <span v-for="s in p.suppliers" :key="s.id" class="badge">{{ s.name }}</span>
@@ -160,6 +234,8 @@ onMounted(() => {
               <span v-if="!p.status_op_names?.length" class="muted">Belum ada</span>
             </td>
             <td class="actions">
+              <button v-if="p.kode_barang" class="chip-btn" @click="openBarcode(p.kode_barang)">Barcode</button>
+              <button v-if="isAdmin" class="chip-btn teal" @click="openEdit(p)">Edit</button>
               <button v-if="isAdmin" class="chip-btn amber" @click="openAssignSupplier(p)">Supplier</button>
               <button class="chip-btn teal" @click="openOpName(p)">Opname</button>
               <button v-if="isAdmin" class="chip-btn red" @click="handleDelete(p.id)">Hapus</button>
@@ -169,7 +245,6 @@ onMounted(() => {
       </table>
     </div>
 
-    <!-- Modal -->
     <transition name="modal">
       <div v-if="showModal" class="overlay" @click.self="showModal = false">
         <div class="modal">
@@ -196,15 +271,43 @@ onMounted(() => {
           </form>
 
           <form v-else @submit.prevent="handleSubmit">
+            <div class="field">
+              <label>Kode Barang</label>
+              <div class="flex-input">
+                <input v-model="form.kode_barang" placeholder="Contoh: PRD-001" required />
+                <button type="button" class="btn-ghost small" @click="form.kode_barang = 'PRD-' + Math.floor(Math.random()*10000).toString().padStart(4, '0')">Generate</button>
+              </div>
+            </div>
             <div class="field"><label>Nama Barang</label><input v-model="form.name" placeholder="Nama produk" required /></div>
             <div class="field"><label>Stock</label><input v-model.number="form.stock" type="number" min="0" required /></div>
             <div class="field"><label>Satuan</label><input v-model="form.satuan" placeholder="pcs, kg, liter, dll" required /></div>
+            <div class="field-row">
+                <div class="field"><label>Harga (Rp)</label><input v-model.number="form.harga" type="number" min="0" required /></div>
+                <div class="field"><label>Min Stok</label><input v-model.number="form.min_stock" type="number" min="0" required /></div>
+            </div>
             <div v-if="isAdmin" class="field"><label>Supplier (opsional)</label>
               <div class="checkbox-group"><label v-for="sup in allSuppliers" :key="sup.id" class="checkbox-item"><input type="checkbox" :value="sup.id" v-model="form.supplier_ids" /><span>{{ sup.name }}</span></label></div>
               <span v-if="!allSuppliers.length" class="hint">Belum ada supplier.</span>
             </div>
             <div class="modal-btns"><button type="button" class="btn-ghost" @click="showModal = false">Batal</button><button type="submit" class="btn-primary">Simpan</button></div>
           </form>
+        </div>
+      </div>
+    </transition>
+
+    <transition name="modal">
+      <div v-if="showBarcodeModal" class="overlay" @click.self="showBarcodeModal = false">
+        <div class="modal text-center">
+          <div class="modal-header">
+            <h2>Barcode Produk</h2>
+            <button class="modal-close" @click="showBarcodeModal = false">✕</button>
+          </div>
+          <div class="barcode-wrapper">
+            <svg id="barcodeCanvas"></svg>
+          </div>
+          <div class="modal-btns" style="justify-content: center; margin-top: 24px;">
+            <button class="btn-primary" @click="printBarcode">Cetak Barcode</button>
+          </div>
         </div>
       </div>
     </transition>
@@ -255,6 +358,7 @@ tbody tr:hover { background: var(--bg-elevated); }
 
 .badge-row { display: flex; flex-wrap: wrap; gap: 4px; }
 .badge { font-size: 11px; background: rgba(249,115,22,0.1); color: var(--accent); padding: 3px 10px; border-radius: 99px; font-weight: 500; }
+.badge-min { font-size: 11px; background: rgba(255,255,255,0.05); color: var(--text-muted); padding: 2px 8px; border-radius: 4px; border: 1px solid var(--border-default); }
 .muted { color: var(--text-muted); font-style: italic; font-size: 12px; }
 
 .actions { display: flex; gap: 6px; flex-wrap: wrap; }
@@ -310,4 +414,13 @@ tbody tr:hover { background: var(--bg-elevated); }
   padding: 9px 18px; border-radius: var(--radius-sm); font-size: 13px; cursor: pointer; font-family: inherit;
 }
 .btn-ghost:hover { border-color: var(--border-strong); color: var(--text-primary); }
+.btn-ghost.small { padding: 8px 12px; font-size: 12px; }
+
+.flex-input { display: flex; gap: 8px; }
+.code-badge { font-family: monospace; background: var(--bg-elevated); padding: 3px 6px; border-radius: 4px; border: 1px solid var(--border-default); }
+
+.inline-barcode { background: #fff; padding: 2px; border-radius: 4px; max-width: 120px; height: auto; display: block; margin: 0 auto; }
+
+.barcode-wrapper { background: #fff; padding: 20px; border-radius: 8px; display: inline-block; }
+.text-center { text-align: center; }
 </style>

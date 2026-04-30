@@ -17,7 +17,9 @@ async function handleLogin() {
   try {
     await authStore.login(form.email, form.password)
     const role = authStore.userRole
-    router.push(`/dashboard/${role}`) 
+    const roleMap = { 'Manajer': 'manager', 'Admin': 'admin', 'Petugas': 'staff' }
+    const target = roleMap[role] || role.toLowerCase()
+    router.push(`/dashboard/${target}`) 
   } catch (err) {
     errorMsg.value = err.response?.data?.message || 'Login gagal, coba lagi!'
   } finally {

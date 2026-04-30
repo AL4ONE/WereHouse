@@ -8,6 +8,15 @@ export const useAuthStore = defineStore("auth", () => {
     const isLoggedIn = computed(() => !!token.value)
     const userRole = computed(() => user.value?.role)
 
+    async function register(name, email, password, password_confirmation) {
+        const response = await api.post("/register", { name, email, password, password_confirmation })
+        token.value = response.data.token
+        user.value = response.data.data
+
+        localStorage.setItem("token", token.value)
+        localStorage.setItem("user", JSON.stringify(user.value))
+    }
+
     async function login(email, password) {
         const response = await api.post("/login", { email, password })
         token.value = response.data.token
@@ -30,5 +39,5 @@ export const useAuthStore = defineStore("auth", () => {
         window.location.reload()
     }
 
-    return { token, user, login, logout, isLoggedIn, userRole }
+    return { token, user, register, login, logout, isLoggedIn, userRole }
 })

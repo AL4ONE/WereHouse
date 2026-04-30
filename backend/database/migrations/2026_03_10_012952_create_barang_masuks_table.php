@@ -16,6 +16,8 @@ return new class extends Migration
             $table->foreignId("barang_id")->constrained()->onDelete("cascade");
             $table->foreignId("supplier_id")->constrained()->onDelete("cascade");
             $table->integer("stock");
+            $table->decimal("harga_satuan", 15, 2)->default(0);
+            $table->decimal("total_harga", 15, 2)->default(0);
             $table->timestamps();
         });
     }

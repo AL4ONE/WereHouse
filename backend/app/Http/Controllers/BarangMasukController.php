@@ -36,7 +36,12 @@ class BarangMasukController extends Controller
         }
 
         $barang = Barang::where("id", $request->barang_id)->first();
-        $barangMasuk = BarangMasuk::create($request->only(['barang_id', 'supplier_id', 'stock']));
+        
+        $data = $request->only(['barang_id', 'supplier_id', 'stock']);
+        $data['harga_satuan'] = $barang->harga;
+        $data['total_harga'] = $barang->harga * $request->stock;
+        
+        $barangMasuk = BarangMasuk::create($data);
         $barang->update([
             "stock_saat_ini" => $barang->stock_saat_ini + $barangMasuk->stock
         ]);
@@ -62,15 +67,17 @@ class BarangMasukController extends Controller
 
         $barangMasuk = BarangMasuk::findOrFail($id);
         
-        // Revert old stock
         $oldBarang = Barang::findOrFail($barangMasuk->barang_id);
         $oldBarang->update([
             "stock_saat_ini" => $oldBarang->stock_saat_ini - $barangMasuk->stock
         ]);
         
-        $barangMasuk->update($request->only(['barang_id', 'supplier_id', 'stock']));
+        $data = $request->only(['barang_id', 'supplier_id', 'stock']);
+        $data['harga_satuan'] = $oldBarang->id == $request->barang_id ? $oldBarang->harga : Barang::findOrFail($request->barang_id)->harga;
+        $data['total_harga'] = $data['harga_satuan'] * $request->stock;
         
-        // Apply new stock
+        $barangMasuk->update($data);
+        
         $newBarang = Barang::findOrFail($request->barang_id);
         $newBarang->update([
             "stock_saat_ini" => $newBarang->stock_saat_ini + $request->stock
@@ -85,7 +92,6 @@ class BarangMasukController extends Controller
     public function destroy($id){
         $barangMasuk = BarangMasuk::findOrFail($id);
         
-        // Revert stock
         $barang = Barang::findOrFail($barangMasuk->barang_id);
         $barang->update([
             "stock_saat_ini" => $barang->stock_saat_ini - $barangMasuk->stock

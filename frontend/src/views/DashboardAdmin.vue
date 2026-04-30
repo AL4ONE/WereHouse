@@ -12,24 +12,24 @@ import { adminNavLinks as navLinks } from '@/config/navLinks'
     </div>
 
     <div class="cards">
-      <router-link to="/Admin/barangs" class="card">
+      <router-link to="/admin/products" class="card">
         <div class="card-glow c1"></div><span class="card-label">Produk</span>
         <span class="card-desc">Kelola data barang</span>
         <span class="card-arrow">→</span>
       </router-link>
-      <router-link to="/Admin/suppliers" class="card">
+      <router-link to="/admin/suppliers" class="card">
         <div class="card-glow c2"></div>
         <span class="card-label">Supplier</span>
         <span class="card-desc">Atur data supplier</span>
         <span class="card-arrow">→</span>
       </router-link>
-      <router-link to="/Admin/barang-masuk" class="card">
+      <router-link to="/admin/inventory-in" class="card">
         <div class="card-glow c3"></div>
         <span class="card-label">Barang Masuk</span>
         <span class="card-desc">Catat stok masuk</span>
         <span class="card-arrow">→</span>
       </router-link>
-      <router-link to="/Admin/barang-keluar" class="card">
+      <router-link to="/admin/inventory-out" class="card">
         <div class="card-glow c4"></div>
         <span class="card-label">Barang Keluar</span>
         <span class="card-desc">Catat stok keluar</span>

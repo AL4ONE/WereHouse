@@ -15,6 +15,24 @@ const isSubmitting = ref(false)
 const editId = ref(null)
 
 const form = ref({ barang_id: '', supplier_id: '', stock: 1 })
+const barcodeInput = ref('')
+const stockInput = ref(null)
+
+function handleBarcodeScan() {
+  if (!barcodeInput.value) return
+  const match = barangs.value.find(b => b.kode_barang === barcodeInput.value)
+  if (match) {
+    form.value.barang_id = match.id
+    barcodeInput.value = ''
+    msg.value = { text: `Barcode terdeteksi: ${match.name}`, type: 'ok' }
+    // Focus quantity field after selecting product
+    setTimeout(() => {
+      stockInput.value?.focus()
+    }, 100)
+  } else {
+    msg.value = { text: 'Barcode tidak terdaftar!', type: 'error' }
+  }
+}
 
 const filteredSuppliers = computed(() => {
   if (!form.value.barang_id) return []
@@ -22,13 +40,26 @@ const filteredSuppliers = computed(() => {
   return barang?.suppliers || []
 })
 
+const selectedBarang = computed(() => {
+  return barangs.value.find(b => b.id === form.value.barang_id) || null
+})
+
+const totalHarga = computed(() => {
+  if (!selectedBarang.value) return 0
+  return selectedBarang.value.harga * form.value.stock
+})
+
+function formatRupiah(n) {
+  return 'Rp ' + Number(n).toLocaleString('id-ID')
+}
+
 watch(() => form.value.barang_id, () => { 
   if(!editId.value) form.value.supplier_id = '' 
 })
 
 async function fetchBarangs() {
   try { 
-    const res = await api.get('/barangs'); 
+    const res = await api.get('/products'); 
     barangs.value = res.data.data 
   } 
   catch (e) { console.log(e) }
@@ -36,7 +67,7 @@ async function fetchBarangs() {
 
 async function fetchInventoryIn() {
   try { 
-    const res = await api.get('/inventoryIn'); 
+    const res = await api.get('/inventory-in'); 
     inventoryIns.value = res.data.data 
   } 
   catch (e) { console.log(e) }
@@ -47,11 +78,11 @@ async function handleSubmit() {
   isSubmitting.value = true
   try {
     if (editId.value) {
-      await api.post(`/inventoryIn/${editId.value}`, form.value)
+      await api.post(`/inventory-in/${editId.value}`, form.value)
       msg.value = { text: 'Data barang masuk berhasil diupdate!', type: 'ok' }
       editId.value = null
     } else {
-      await api.post('/inventoryIn', form.value)
+      await api.post('/inventory-in', form.value)
       msg.value = { text: 'Catatan barang masuk berhasil ditambahkan!', type: 'ok' }
     }
     form.value = { barang_id: '', supplier_id: '', stock: 1 }
@@ -76,7 +107,7 @@ async function handleDelete(id) {
   if(!confirm('Yakin ingin menghapus data ini? Stok barang akan disesuaikan kembali.')) return;
   msg.value = { text: '', type: '' }
   try {
-    await api.delete(`/inventoryIn/${id}`)
+    await api.delete(`/inventory-in/${id}`)
     msg.value = { text: 'Data barang masuk berhasil dihapus!', type: 'ok' }
     fetchBarangs()
     fetchInventoryIn()
@@ -109,10 +140,17 @@ onMounted(() => {
     </div>
 
     <div class="content-grid">
-      <!-- Form Section -->
       <div class="glass-card form-card">
         <h3 class="card-title">{{ editId ? 'Edit Barang Masuk' : 'Tambah Barang Masuk' }}</h3>
         <form @submit.prevent="handleSubmit">
+          <div class="field barcode-scan-field">
+            <label>Scan Barcode (Opsional)</label>
+            <div class="input-with-icon">
+              <svg class="scan-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7V5a2 2 0 0 1 2-2h2"></path><path d="M17 3h2a2 2 0 0 1 2 2v2"></path><path d="M21 17v2a2 2 0 0 1-2 2h-2"></path><path d="M7 21H5a2 2 0 0 1-2-2v-2"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg>
+              <input v-model="barcodeInput" @keydown.enter.prevent="handleBarcodeScan" placeholder="Klik & scan di sini..." />
+            </div>
+            <small class="hint">Arahkan scanner ke barcode lalu tekan enter</small>
+          </div>
           <div class="field">
             <label>Produk</label>
             <select v-model="form.barang_id" required>
@@ -129,7 +167,11 @@ onMounted(() => {
           </div>
           <div class="field">
             <label>Jumlah Barang Masuk</label>
-            <input v-model.number="form.stock" type="number" min="1" required />
+            <input ref="stockInput" v-model.number="form.stock" type="number" min="1" required />
+          </div>
+          <div v-if="selectedBarang" class="pricing-info">
+            <p>Harga per barang: <strong>{{ formatRupiah(selectedBarang.harga) }}</strong></p>
+            <p>Total Harga: <strong>{{ formatRupiah(totalHarga) }}</strong></p>
           </div>
           <div class="form-actions">
             <button type="submit" class="btn-submit orange" :disabled="isSubmitting">
@@ -143,7 +185,6 @@ onMounted(() => {
         </form>
       </div>
 
-      <!-- Table Section -->
       <div class="glass-card table-section">
         <h3 class="card-title">Riwayat Barang Masuk</h3>
         <div class="table-container">
@@ -153,7 +194,9 @@ onMounted(() => {
                 <th>Tanggal</th>
                 <th>Produk</th>
                 <th>Supplier</th>
+                <th>Harga Satuan</th>
                 <th>Jumlah Masuk</th>
+                <th>Total Harga</th>
                 <th>Aksi</th>
               </tr>
             </thead>
@@ -162,7 +205,9 @@ onMounted(() => {
                 <td>{{ new Date(item.created_at).toLocaleDateString() }}</td>
                 <td>{{ item.barang?.name || 'Unknown' }}</td>
                 <td>{{ item.supplier?.name || 'Unknown' }}</td>
+                <td>{{ formatRupiah(item.harga_satuan) }}</td>
                 <td><span class="badge increment">+{{ item.stock }}</span></td>
+                <td style="font-weight: bold;">{{ formatRupiah(item.total_harga) }}</td>
                 <td>
                   <div class="actions">
                     <button class="btn-icon edit" @click="handleEdit(item)" title="Edit">
@@ -175,7 +220,7 @@ onMounted(() => {
                 </td>
               </tr>
               <tr v-if="inventoryIns.length === 0">
-                <td colspan="5" class="empty-state">Belum ada data barang masuk.</td>
+                <td colspan="7" class="empty-state">Belum ada data barang masuk.</td>
               </tr>
             </tbody>
           </table>
@@ -268,4 +313,33 @@ onMounted(() => {
 .btn-icon:hover { color: var(--text-primary); border-color: var(--text-primary); }
 .btn-icon.edit:hover { color: var(--accent); border-color: var(--accent); background: rgba(249,115,22,0.1); }
 .btn-icon.delete:hover { border-color: var(--danger); background: var(--danger-bg); color: var(--danger); }
+
+.pricing-info {
+  margin: 16px 0;
+  padding: 12px;
+  background: rgba(249,115,22,0.05);
+  border: 1px solid rgba(249,115,22,0.15);
+  border-radius: var(--radius-sm);
+}
+.pricing-info p {
+  margin: 0 0 4px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.pricing-info strong {
+  color: var(--accent);
+}
+
+.barcode-scan-field {
+  margin-bottom: 24px;
+  padding: 12px;
+  background: var(--bg-elevated);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-md);
+}
+.input-with-icon { position: relative; display: flex; align-items: center; }
+.scan-icon { position: absolute; left: 12px; color: var(--accent); opacity: 0.7; }
+.input-with-icon input { padding-left: 40px !important; border-style: solid !important; background: var(--bg-surface) !important; }
+
+.hint { font-size: 11px; color: var(--text-muted); margin-top: 4px; display: block; }
 </style>

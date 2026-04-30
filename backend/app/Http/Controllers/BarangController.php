@@ -21,10 +21,13 @@ class BarangController extends Controller
     public function create(Request $request)
     {
         $val = Validator::make($request->all(), [
+            "kode_barang" => "required|unique:barangs,kode_barang",
             "name" => "required",
             "stock_awal" => "required|numeric",
             "stock_saat_ini" => "required|numeric",
             "satuan" => "required",
+            "harga" => "required|numeric|min:0",
+            "min_stock" => "required|numeric|min:0",
             "supplier_ids" => "nullable|array",
             "supplier_ids.*" => "exists:suppliers,id",
         ]);
@@ -35,7 +38,7 @@ class BarangController extends Controller
             ]);
         }
 
-        $barang = Barang::create($request->only(['name', 'stock_awal', 'stock_saat_ini', 'satuan']));
+        $barang = Barang::create($request->only(['kode_barang', 'name', 'stock_awal', 'stock_saat_ini', 'satuan', 'harga', 'min_stock']));
 
         if ($request->has('supplier_ids')) {
             $barang->suppliers()->sync($request->supplier_ids);
@@ -71,10 +74,13 @@ class BarangController extends Controller
         }
 
         $val = Validator::make($request->all(), [
+            "kode_barang" => "required|unique:barangs,kode_barang,".$id,
             "name" => "required",
             "stock_awal" => "required|numeric",
             "stock_saat_ini" => "required|numeric",
             "satuan" => "required",
+            "harga" => "required|numeric|min:0",
+            "min_stock" => "required|numeric|min:0",
             "supplier_ids" => "nullable|array",
             "supplier_ids.*" => "exists:suppliers,id",
         ]);
@@ -84,7 +90,7 @@ class BarangController extends Controller
                 'error' => $val->errors(),
             ]);
         }
-        $barang->update($request->only(['name', 'stock_awal', 'stock_saat_ini', 'satuan']));
+        $barang->update($request->only(['kode_barang', 'name', 'stock_awal', 'stock_saat_ini', 'satuan', 'harga', 'min_stock']));
 
         if ($request->has('supplier_ids')) {
             $barang->suppliers()->sync($request->supplier_ids);

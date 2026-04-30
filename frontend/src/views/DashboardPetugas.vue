@@ -12,13 +12,13 @@ import { petugasNavLinks as navLinks } from '@/config/navLinks'
     </div>
 
     <div class="cards">
-      <router-link to="/Petugas/barang-masuk" class="card">
+      <router-link to="/staff/inventory-in" class="card">
         <div class="card-glow green"></div>
         <span class="card-label">Barang Masuk</span>
         <span class="card-desc">Catat stok masuk dari supplier</span>
         <span class="card-arrow">→</span>
       </router-link>
-      <router-link to="/Petugas/barang-keluar" class="card">
+      <router-link to="/staff/inventory-out" class="card">
         <div class="card-glow orange"></div>
         <span class="card-label">Barang Keluar</span>
         <span class="card-desc">Catat stok keluar ke tujuan</span>

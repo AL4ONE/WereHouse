@@ -15,7 +15,7 @@ const reportType = ref('semua')
 async function fetchBarangs() {
   isLoading.value = true
   try {
-    const res = await api.get('/barangs')
+    const res = await api.get('/products')
     barangs.value = res.data.data
   } catch (e) { 
     console.error(e) 
@@ -111,21 +111,19 @@ function cetakPDF() {
   let tableBody = []
 
   if (reportType.value === 'semua' || reportType.value === 'menipis') {
-    tableHead = [['No', 'Nama Barang', 'Satuan', 'Stok Awal', 'Masuk', 'Keluar', 'Opname (+)', 'Opname (-)', 'Sisa Stok']]
+    tableHead = [['No', 'Nama Barang', 'Satuan', 'Stok Awal', 'Masuk', 'Keluar', 'Opname Detail', 'Sisa Stok']]
     tableBody = reportData.value.map((p, i) => [
       i + 1, p.name, p.satuan, p.stock_awal, `+${p.totalMasuk}`, `-${p.totalKeluar}`, 
-      p.totalOpnamePlus ? `+${p.totalOpnamePlus}` : '-', 
-      p.totalOpnameMinus ? `-${p.totalOpnameMinus}` : '-',
+      p.opnames.map(o => `${o.tipe === 'penambahan' ? '+' : '-'}${o.stock} (${o.keterangan})`).join('\n') || '-',
       p.stock_saat_ini
     ])
   } else {
     const label = reportType.value === 'masuk' ? 'Masuk' : 'Keluar'
-    tableHead = [['No', 'Tanggal', 'Nama Barang', 'Satuan', `Jumlah ${label}`, 'Opname (+)', 'Opname (-)', 'Sisa Stok']]
+    tableHead = [['No', 'Tanggal', 'Nama Barang', 'Satuan', `Jumlah ${label}`, 'Opname Detail', 'Sisa Stok']]
     tableBody = reportData.value.map((p, i) => [
       i + 1, new Date(p.created_at).toLocaleDateString('id-ID'), p.name, p.satuan, 
       reportType.value === 'masuk' ? `+${p.jumlah}` : `-${p.jumlah}`,
-      p.totalOpPlus ? `+${p.totalOpPlus}` : '-',
-      p.totalOpMinus ? `-${p.totalOpMinus}` : '-',
+      p.opnames.map(o => `${o.tipe === 'penambahan' ? '+' : '-'}${o.stock} (${o.keterangan})`).join('\n') || '-',
       p.stock_saat_ini
     ])
   }
@@ -206,8 +204,7 @@ onMounted(() => { fetchBarangs() })
             <th>Nama Barang</th>
             <th>Satuan</th>
             <th>Total Masuk (+)</th>
-            <th>Opname (+)</th>
-            <th>Opname (-)</th>
+            <th>Opname</th>
             <th>Sisa Stok</th>
           </tr>
           <tr v-else-if="reportType === 'keluar'">
@@ -216,8 +213,7 @@ onMounted(() => { fetchBarangs() })
             <th>Nama Barang</th>
             <th>Satuan</th>
             <th>Total Keluar (-)</th>
-            <th>Opname (+)</th>
-            <th>Opname (-)</th>
+            <th>Opname</th>
             <th>Sisa Stok</th>
           </tr>
         </thead>
@@ -251,8 +247,15 @@ onMounted(() => { fetchBarangs() })
               <td class="name-cell">{{ p.name }}</td>
               <td>{{ p.satuan }}</td>
               <td class="num-cell ok">+{{ p.jumlah }}</td>
-              <td class="num-cell" :class="p.totalOpPlus ? 'ok' : ''">{{ p.totalOpPlus ? `+${p.totalOpPlus}` : '-' }}</td>
-              <td class="num-cell" :class="p.totalOpMinus ? 'err' : ''">{{ p.totalOpMinus ? `-${p.totalOpMinus}` : '-' }}</td>
+              <td class="opname-cell">
+                <div v-if="p.opnames.length" class="opname-list">
+                  <div v-for="op in p.opnames" :key="op.id" class="opname-chip">
+                    <span :class="op.tipe === 'penambahan' ? 'ok' : 'err'">{{ op.tipe === 'penambahan' ? '+' : '-' }}{{ op.stock }}</span>
+                    <span class="opname-ket">{{ op.keterangan }}</span>
+                  </div>
+                </div>
+                <span v-else class="muted">-</span>
+              </td>
               <td class="num-cell sisa" :class="p.stock_saat_ini <= 5 ? 'err' : 'ok-bold'">{{ p.stock_saat_ini }}</td>
             </tr>
           </template>
@@ -263,8 +266,15 @@ onMounted(() => { fetchBarangs() })
               <td class="name-cell">{{ p.name }}</td>
               <td>{{ p.satuan }}</td>
               <td class="num-cell err">-{{ p.jumlah }}</td>
-              <td class="num-cell" :class="p.totalOpPlus ? 'ok' : ''">{{ p.totalOpPlus ? `+${p.totalOpPlus}` : '-' }}</td>
-              <td class="num-cell" :class="p.totalOpMinus ? 'err' : ''">{{ p.totalOpMinus ? `-${p.totalOpMinus}` : '-' }}</td>
+              <td class="opname-cell">
+                <div v-if="p.opnames.length" class="opname-list">
+                  <div v-for="op in p.opnames" :key="op.id" class="opname-chip">
+                    <span :class="op.tipe === 'penambahan' ? 'ok' : 'err'">{{ op.tipe === 'penambahan' ? '+' : '-' }}{{ op.stock }}</span>
+                    <span class="opname-ket">{{ op.keterangan }}</span>
+                  </div>
+                </div>
+                <span v-else class="muted">-</span>
+              </td>
               <td class="num-cell sisa" :class="p.stock_saat_ini <= 5 ? 'err' : 'ok-bold'">{{ p.stock_saat_ini }}</td>
             </tr>
           </template>

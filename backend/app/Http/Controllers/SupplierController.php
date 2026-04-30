@@ -21,6 +21,7 @@ class SupplierController extends Controller
             "name" => "required",
             "email" => "required",
             "phone" => "required|numeric",
+            "alamat" => "required|string",
             "barang_ids" => "nullable|array",
             "barang_ids.*" => "exists:barangs,id",
         ]);
@@ -31,7 +32,7 @@ class SupplierController extends Controller
             ]);
         }
 
-        $supplier = Supplier::create($request->only(['name', 'email', 'phone']));
+        $supplier = Supplier::create($request->only(['name', 'email', 'phone', 'alamat']));
 
         if ($request->has('barang_ids')) {
             $supplier->barangs()->sync($request->barang_ids);
@@ -68,6 +69,7 @@ class SupplierController extends Controller
             "name" => "required",
             "email" => "required",
             "phone" => "required|numeric",
+            "alamat" => "required|string",
             "barang_ids" => "nullable|array",
             "barang_ids.*" => "exists:barangs,id",
         ]);
@@ -77,7 +79,7 @@ class SupplierController extends Controller
                 'error' => $val->errors(),
             ]);
         }
-        $supplier->update($request->only(['name', 'email', 'phone']));
+        $supplier->update($request->only(['name', 'email', 'phone', 'alamat']));
 
         if ($request->has('barang_ids')) {
             $supplier->barangs()->sync($request->barang_ids);
