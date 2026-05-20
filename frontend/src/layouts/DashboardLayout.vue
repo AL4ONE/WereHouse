@@ -81,7 +81,7 @@ onBeforeUnmount(() => {
     <nav class="topnav">
       <div class="nav-left">
         <router-link :to="navLinks[0]?.path || '/'" class="brand">
-          <span class="brand-text">Ware<strong>House</strong></span>
+          <img src="@/assets/logo.png" alt="Warehouse Logo" class="brand-logo" />
         </router-link>
         <div class="nav-divider"></div>
         <div class="nav-links">
@@ -98,7 +98,7 @@ onBeforeUnmount(() => {
       </div>
       <div class="nav-right">
         <div class="notif-wrapper" ref="notifRef">
-          <button class="btn-icon" @click="toggleNotif" title="Notifikasi Stok Menipis">
+          <button class="btn-icon" @click="toggleNotif" title="Low Stock Notification">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
               <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
@@ -109,17 +109,17 @@ onBeforeUnmount(() => {
           <transition name="dd">
             <div v-if="showNotifDropdown" class="notif-dropdown">
               <div class="dd-header">
-                <span>Notifikasi Stok</span>
+                <span>Stock Notification</span>
                 <span class="dd-count" v-if="lowStockItems.length">{{ lowStockItems.length }}</span>
               </div>
-              <div v-if="lowStockItems.length === 0" class="dd-empty"><span>Semua stok aman!</span>
+              <div v-if="lowStockItems.length === 0" class="dd-empty"><span>All stock is safe!</span>
               </div>
               <div v-else class="dd-list">
                 <div v-for="item in lowStockItems" :key="item.id" class="dd-item">
                   <div class="dd-item-dot"></div>
                   <div class="dd-item-body">
                     <span class="dd-item-name">{{ item.name }}</span>
-                    <span class="dd-item-stock">Sisa: <strong>{{ item.stock_saat_ini }}</strong> {{ item.satuan }}</span>
+                    <span class="dd-item-stock">Remaining: <strong>{{ item.stock_saat_ini }}</strong> {{ item.satuan }}</span>
                   </div>
                 </div>
               </div>
@@ -192,26 +192,11 @@ onBeforeUnmount(() => {
   text-decoration: none;
 }
 
-.brand-icon {
-  width: 36px; height: 36px;
-  background: linear-gradient(135deg, var(--accent-bold), #f59e0b);
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 18px;
-  box-shadow: 0 2px 12px rgba(249,115,22,0.3);
-}
-
-.brand-text {
-  font-size: 16px;
-  color: var(--text-secondary);
-  letter-spacing: -0.3px;
-  font-weight: 400;
-}
-.brand-text strong {
-  color: var(--text-primary);
-  font-weight: 700;
+.brand-logo {
+  height: 40px;
+  width: 40px;
+  object-fit: contain;
+  border-radius: 50%;
 }
 
 .nav-divider {

@@ -21,6 +21,10 @@ class AuthMiddleware
                 "message" => "invalid token"
             ]);
         }
+
+        // Set sanctum as the active guard so $request->user() works in controllers
+        Auth::shouldUse('sanctum');
+
         return $next($request);
     }
 }

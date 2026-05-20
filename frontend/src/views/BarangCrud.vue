@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import api from '@/api'
 
 const barangs = ref([])
@@ -12,6 +12,18 @@ const form = ref({ title: '', description: '', harga: 0 })
 function formatRupiah(n) {
   return 'Rp ' + Number(n).toLocaleString('id-ID')
 }
+
+const hargaFormatted = computed({
+  get() {
+    const val = form.value.harga
+    if (val === 0 || val === '' || val === null) return ''
+    return Number(val).toLocaleString('id-ID')
+  },
+  set(v) {
+    const raw = String(v).replace(/\./g, '').replace(/[^0-9]/g, '')
+    form.value.harga = raw ? Number(raw) : 0
+  }
+})
 
 async function fetchBarangs() {
   try {
@@ -44,28 +56,27 @@ async function handleSubmit() {
         description: form.value.description,
         harga: form.value.harga
       })
-      msg.value = { text: 'Barang diupdate!', type: 'ok' }
+      msg.value = { text: 'Product updated!', type: 'ok' }
     } else {
       await api.post('/products', {
         title: form.value.title,
         description: form.value.description,
         harga: form.value.harga
       })
-      msg.value = { text: 'Barang ditambahkan!', type: 'ok' }
+      msg.value = { text: 'Product added!', type: 'ok' }
     }
     showModal.value = false
     fetchBarangs()
-  } catch (e) {
-    msg.value = { text: 'Gagal menyimpan!', type: 'err' }
+    msg.value = { text: 'Failed to save!', type: 'err' }
     console.log(e)
   }
 }
 
 async function handleDelete(id) {
-  if (!confirm('Hapus barang ini?')) return
+  if (!confirm('Delete this product?')) return
   try {
     await api.delete(`/products/${id}`)
-    msg.value = { text: 'Barang dihapus!', type: 'ok' }
+    msg.value = { text: 'Product deleted!', type: 'ok' }
     fetchBarangs()
   } catch (e) {
     console.log(e)
@@ -87,19 +98,19 @@ onMounted(() => {
   <div class="crud-page">
     <nav class="topnav">
       <div class="nav-left">
-        <span class="brand-text">Belajar<strong>CRUD</strong></span>
+        <span class="brand-text">Learning<strong>CRUD</strong></span>
         <div class="nav-divider"></div>
         <router-link to="/learning/login" class="nav-link">Login</router-link>
         <router-link to="/learning/register" class="nav-link">Register</router-link>
-        <router-link to="/learning/products" class="nav-link active">Barang</router-link>
+        <router-link to="/learning/products" class="nav-link active">Product</router-link>
       </div>
       <button class="btn-logout" @click="handleLogout">Logout</button>
     </nav>
 
     <main class="page-content">
       <div class="top-row">
-        <h1 class="page-title">Data <span class="gradient-text">Barang</span></h1>
-        <button class="btn-primary" @click="openCreate">+ Tambah Barang</button>
+        <h1 class="page-title">Product <span class="gradient-text">Data</span></h1>
+        <button class="btn-primary" @click="openCreate">+ Add Product</button>
       </div>
 
       <div v-if="msg.text" class="alert" :class="msg.type">{{ msg.text }}</div>
@@ -107,7 +118,7 @@ onMounted(() => {
       <div class="glass-card">
         <table>
           <thead>
-            <tr><th>No</th><th>Title</th><th>Deskripsi</th><th>Harga</th><th>Aksi</th></tr>
+            <tr><th>No</th><th>Title</th><th>Description</th><th>Price</th><th>Actions</th></tr>
           </thead>
           <tbody>
             <tr v-for="(b, i) in barangs" :key="b.id">
@@ -117,11 +128,11 @@ onMounted(() => {
               <td class="price-cell"><span class="price-pill">{{ formatRupiah(b.harga) }}</span></td>
               <td class="actions">
                 <button class="chip-btn teal" @click="openEdit(b)">Edit</button>
-                <button class="chip-btn red" @click="handleDelete(b.id)">Hapus</button>
+                <button class="chip-btn red" @click="handleDelete(b.id)">Delete</button>
               </td>
             </tr>
             <tr v-if="barangs.length === 0">
-              <td colspan="5" class="empty">Belum ada barang.</td>
+              <td colspan="5" class="empty">No products yet.</td>
             </tr>
           </tbody>
         </table>
@@ -132,18 +143,18 @@ onMounted(() => {
       <div v-if="showModal" class="overlay" @click.self="showModal = false">
         <div class="modal">
           <div class="modal-header">
-            <h2 v-if="isEditing">Edit Barang</h2>
-            <h2 v-else>Tambah Barang</h2>
+            <h2 v-if="isEditing">Edit Product</h2>
+            <h2 v-else>Add Product</h2>
             <button class="modal-close" @click="showModal = false">✕</button>
           </div>
           <form @submit.prevent="handleSubmit">
-            <div class="field"><label>Title</label><input v-model="form.title" placeholder="Nama barang" required /></div>
-            <div class="field"><label>Deskripsi</label><textarea v-model="form.description" placeholder="Deskripsi" rows="3" required></textarea></div>
-            <div class="field"><label>Harga</label><input v-model.number="form.harga" type="number" min="0" required /></div>
+            <div class="field"><label>Title</label><input v-model="form.title" placeholder="Product name" required /></div>
+            <div class="field"><label>Description</label><textarea v-model="form.description" placeholder="Description" rows="3" required></textarea></div>
+            <div class="field"><label>Price</label><input v-model="hargaFormatted" type="text" inputmode="numeric" placeholder="0" required /></div>
             <div class="modal-btns">
-              <button type="button" class="btn-ghost" @click="showModal = false">Batal</button>
+              <button type="button" class="btn-ghost" @click="showModal = false">Cancel</button>
               <button v-if="isEditing" type="submit" class="btn-primary">Update</button>
-              <button v-else type="submit" class="btn-primary">Simpan</button>
+              <button v-else type="submit" class="btn-primary">Save</button>
             </div>
           </form>
         </div>

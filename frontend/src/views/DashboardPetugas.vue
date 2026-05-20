@@ -7,21 +7,27 @@ import { petugasNavLinks as navLinks } from '@/config/navLinks'
   <DashboardLayout :navLinks="navLinks">
     <div class="hero">
       <div class="hero-text">
-        <h1>Selamat Datang, <span class="gradient-text">Petugas</span></h1>
+        <h1>Welcome, <span class="gradient-text">Staff</span></h1>
       </div>
     </div>
 
     <div class="cards">
       <router-link to="/staff/inventory-in" class="card">
         <div class="card-glow green"></div>
-        <span class="card-label">Barang Masuk</span>
-        <span class="card-desc">Catat stok masuk dari supplier</span>
+        <span class="card-label">Inbound</span>
+        <span class="card-desc">Record incoming stock from suppliers</span>
+        <span class="card-arrow">→</span>
+      </router-link>
+      <router-link to="/staff/purchase-orders" class="card">
+        <div class="card-glow orange"></div>
+        <span class="card-label">Purchase Orders</span>
+        <span class="card-desc">Create purchase orders to suppliers</span>
         <span class="card-arrow">→</span>
       </router-link>
       <router-link to="/staff/inventory-out" class="card">
         <div class="card-glow orange"></div>
-        <span class="card-label">Barang Keluar</span>
-        <span class="card-desc">Catat stok keluar ke tujuan</span>
+        <span class="card-label">Outbound</span>
+        <span class="card-desc">Record outgoing stock to destinations</span>
         <span class="card-arrow">→</span>
       </router-link>
     </div>

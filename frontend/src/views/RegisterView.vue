@@ -33,13 +33,13 @@ async function handleRegister() {
     localStorage.setItem('token', response.data.token)
     localStorage.setItem('user', JSON.stringify(response.data.data))
 
-    successMsg.value = 'Registrasi berhasil!'
+    successMsg.value = 'Registration successful!'
 
     setTimeout(() => {
       router.push('/belajar/barang')
     }, 1000)
   } catch (err) {
-    errorMsg.value = err.response?.data?.message || 'Registrasi gagal!'
+    errorMsg.value = err.response?.data?.message || 'Registration failed!'
   } finally {
     isLoading.value = false
   }
@@ -62,8 +62,8 @@ async function handleRegister() {
             <line x1="22" y1="11" x2="16" y2="11"></line>
           </svg>
         </div>
-        <h1>Buat <span class="accent">Akun</span></h1>
-        <p>Daftar untuk mengakses sistem</p>
+        <h1>Create <span class="accent">Account</span></h1>
+        <p>Register to access the system</p>
       </div>
 
       <div v-if="errorMsg" class="error-box">{{ errorMsg }}</div>
@@ -71,13 +71,13 @@ async function handleRegister() {
 
       <form @submit.prevent="handleRegister">
         <div class="field">
-          <label>Nama Lengkap</label>
+          <label>Full Name</label>
           <div class="input-wrap">
             <svg class="input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
               <circle cx="12" cy="7" r="4"></circle>
             </svg>
-            <input v-model="form.name" type="text" placeholder="Masukkan nama" required />
+            <input v-model="form.name" type="text" placeholder="Enter your name" required />
           </div>
         </div>
 
@@ -99,30 +99,30 @@ async function handleRegister() {
               <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
               <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
             </svg>
-            <input v-model="form.password" :type="showPassword ? 'text' : 'password'" placeholder="Minimal 6 karakter" required />
+            <input v-model="form.password" :type="showPassword ? 'text' : 'password'" placeholder="Minimum 6 characters" required />
             <button type="button" class="eye-btn" @click="showPassword = !showPassword">👁</button>
           </div>
         </div>
 
         <div class="field">
-          <label>Konfirmasi Password</label>
+          <label>Confirm Password</label>
           <div class="input-wrap">
             <svg class="input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
             </svg>
-            <input v-model="form.password_confirmation" :type="showPassword ? 'text' : 'password'" placeholder="Ulangi password" required />
+            <input v-model="form.password_confirmation" :type="showPassword ? 'text' : 'password'" placeholder="Repeat password" required />
           </div>
         </div>
 
         <button type="submit" class="btn-submit" :disabled="isLoading">
           <span v-if="isLoading" class="spinner"></span>
-          {{ isLoading ? 'Memproses...' : 'Daftar Sekarang' }}
+          {{ isLoading ? 'Processing...' : 'Register Now' }}
         </button>
       </form>
 
       <p class="switch-text">
-        Sudah punya akun?
-        <router-link to="/learning/login" class="link">Masuk di sini</router-link>
+        Already have an account?
+        <router-link to="/learning/login" class="link">Sign in here</router-link>
       </p>
     </div>
   </div>

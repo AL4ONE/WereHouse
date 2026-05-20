@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string("kode_barang")->unique();
             $table->string("name");
+            $table->string("placement")->nullable();
             $table->integer("stock_awal");
             $table->integer("stock_saat_ini");
             $table->string("satuan");

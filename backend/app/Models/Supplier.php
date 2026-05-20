@@ -12,4 +12,9 @@ class Supplier extends Model
     {
         return $this->belongsToMany(Barang::class, 'barang_supplier', 'supplier_id', 'barang_id');
     }
+
+    public function purchaseOrders()
+    {
+        return $this->hasMany(PurchaseOrder::class);
+    }
 }

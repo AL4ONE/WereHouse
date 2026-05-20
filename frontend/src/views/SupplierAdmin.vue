@@ -73,17 +73,17 @@ async function handleSubmit() {
   try {
     if (isEditing.value) {
       await api.post(`/suppliers/${editId.value}`, form.value)
-      msg.value = { text: 'Supplier berhasil diupdate!', type: 'ok' }
+      msg.value = { text: 'Supplier updated successfully!', type: 'ok' }
     } else {
       await api.post('/suppliers', form.value)
-      msg.value = { text: 'Supplier berhasil ditambahkan!', type: 'ok' }
+      msg.value = { text: 'Supplier added successfully!', type: 'ok' }
     }
     showModal.value = false
     fetchSuppliers()
   } 
   catch (e) { 
     console.log(e) 
-    msg.value = { text: 'Terjadi kesalahan sistem.', type: 'error' }
+    msg.value = { text: 'A system error occurred.', type: 'error' }
   }
   finally { 
     isSubmitting.value = false 
@@ -91,10 +91,10 @@ async function handleSubmit() {
 }
 
 async function handleDelete(id) {
-  if (!confirm('Yakin ingin menghapus supplier ini?')) return
+  if (!confirm('Are you sure you want to delete this supplier?')) return
   try {
     await api.delete(`/suppliers/${id}`)
-    msg.value = { text: 'Supplier berhasil dihapus!', type: 'ok' }
+    msg.value = { text: 'Supplier deleted successfully!', type: 'ok' }
     fetchSuppliers()
   } catch (e) {
     console.log(e)
@@ -111,13 +111,13 @@ onMounted(() => {
   <DashboardLayout :navLinks="navLinks">
     <div class="top-row">
       <div>
-        <h1 class="page-title">Data <span class="gradient-text">Supplier</span></h1>
-        <p class="page-desc">Kelola daftar supplier dan produk yang mereka suplai</p>
+        <h1 class="page-title">Data <span class="gradient-text">Suppliers</span></h1>
+        <p class="page-desc">Manage the list of suppliers and the products they supply</p>
       </div>
       <div>
         <button class="btn-primary" @click="openCreate">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Tambah Supplier
+          Add Supplier
         </button>
       </div>
     </div>
@@ -131,23 +131,23 @@ onMounted(() => {
       <div class="table-toolbar">
         <div class="search-box">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input type="text" v-model="searchQuery" placeholder="Cari nama, email, atau telepon..." />
+          <input type="text" v-model="searchQuery" placeholder="Search by name, email, or phone..." />
         </div>
       </div>
 
       <div class="table-card">
         <div v-if="isLoading" class="loading">
           <div class="spinner-lg"></div>
-          <span>Memuat data...</span>
+          <span>Loading data...</span>
         </div>
         <table v-else>
           <thead>
             <tr>
               <th>No</th>
-              <th>Nama Supplier</th>
-              <th>Kontak</th>
-              <th>Produk (Barang)</th>
-              <th>Aksi</th>
+              <th>Supplier Name</th>
+              <th>Contact</th>
+              <th>Products</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -165,15 +165,15 @@ onMounted(() => {
                 <span v-if="sup.barangs?.length" class="badge-row">
                   <span v-for="b in sup.barangs" :key="b.id" class="badge">{{ b.name }}</span>
                 </span>
-                <span v-else class="muted">Belum ada</span>
+                <span v-else class="muted">None</span>
               </td>
               <td class="actions">
                 <button class="chip-btn teal" @click="openEdit(sup)">Edit</button>
-                <button class="chip-btn red" @click="handleDelete(sup.id)">Hapus</button>
+                <button class="chip-btn red" @click="handleDelete(sup.id)">Delete</button>
               </td>
             </tr>
             <tr v-if="filteredSuppliers.length === 0 && !isLoading">
-              <td colspan="5" class="empty-state">Tidak ada supplier yang ditemukan.</td>
+              <td colspan="5" class="empty-state">No suppliers found.</td>
             </tr>
           </tbody>
         </table>
@@ -184,12 +184,12 @@ onMounted(() => {
       <div v-if="showModal" class="overlay" @click.self="showModal = false">
         <div class="modal">
           <div class="modal-header">
-            <h2>{{ isEditing ? 'Edit Supplier' : 'Tambah Supplier' }}</h2>
+            <h2>{{ isEditing ? 'Edit Supplier' : 'Add Supplier' }}</h2>
             <button class="modal-close" @click="showModal = false">✕</button>
           </div>
           <form @submit.prevent="handleSubmit">
             <div class="field">
-              <label>Nama Supplier</label>
+              <label>Supplier Name</label>
               <input v-model="form.name" placeholder="PT Teknologi Jaya" required />
             </div>
             <div class="field">
@@ -197,28 +197,28 @@ onMounted(() => {
               <input v-model="form.email" type="email" placeholder="example@gmail.com" required />
             </div>
             <div class="field">
-              <label>Nomor Telepon</label>
+              <label>Phone Number</label>
               <input v-model="form.phone" placeholder="081234567890" required />
             </div>
             <div class="field">
-              <label>Alamat</label>
+              <label>Address</label>
               <textarea v-model="form.alamat" placeholder="Jl. Sudirman No. 1, Jakarta" required></textarea>
             </div>
             <div class="field">
-              <label>Produk yang disuplai</label>
+              <label>Supplied Products</label>
               <div class="checkbox-group">
                 <label v-for="b in barangs" :key="b.id" class="checkbox-item">
                   <input type="checkbox" :value="b.id" v-model="form.barang_ids" />
                   <span>{{ b.name }}</span>
                 </label>
               </div>
-              <span class="hint">Pilih produk yang disuplai oleh supplier ini</span>
+              <span class="hint">Select products supplied by this supplier</span>
             </div>
             <div class="modal-btns">
-              <button type="button" class="btn-ghost" @click="showModal = false">Batal</button>
+              <button type="button" class="btn-ghost" @click="showModal = false">Cancel</button>
               <button type="submit" class="btn-primary" :disabled="isSubmitting">
                 <span v-if="isSubmitting" class="spinner"></span>
-                {{ isSubmitting ? 'Menyimpan...' : 'Simpan Supplier' }}
+                {{ isSubmitting ? 'Saving...' : 'Save Supplier' }}
               </button>
             </div>
           </form>

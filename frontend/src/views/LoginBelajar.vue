@@ -21,7 +21,7 @@ async function handleLogin() {
     localStorage.setItem('user', JSON.stringify(response.data.data))
     router.push('/belajar/barang')
   } catch (err) {
-    errorMsg.value = err.response?.data?.message || 'Login gagal!'
+    errorMsg.value = err.response?.data?.message || 'Login failed!'
   } finally {
     isLoading.value = false
   }
@@ -42,8 +42,8 @@ async function handleLogin() {
             <line x1="15" y1="12" x2="3" y2="12"/>
           </svg>
         </div>
-        <h1>Belajar <span class="accent">Login</span></h1>
-        <p>Masuk ke sistem</p>
+        <h1>Learning <span class="accent">Login</span></h1>
+        <p>Sign in to system</p>
       </div>
 
       <div v-if="errorMsg" class="error-box">{{ errorMsg }}</div>
@@ -64,11 +64,11 @@ async function handleLogin() {
         </div>
         <button type="submit" class="btn-submit" :disabled="isLoading">
           <span v-if="isLoading" class="spinner"></span>
-          {{ isLoading ? 'Memproses...' : 'Masuk' }}
+          {{ isLoading ? 'Processing...' : 'Sign In' }}
         </button>
       </form>
 
-      <p class="switch-text">Belum punya akun? <router-link to="/learning/register" class="link">Daftar</router-link></p>
+      <p class="switch-text">Don't have an account? <router-link to="/learning/register" class="link">Register</router-link></p>
     </div>
   </div>
 </template>

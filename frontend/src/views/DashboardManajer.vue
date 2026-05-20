@@ -99,11 +99,11 @@ function resetFilter() {
 function cetakPDF() {
   const doc = new jsPDF({ orientation: 'landscape' })
   
-  doc.text('Laporan Inventori Gudang', 14, 15)
+  doc.text('Warehouse Inventory Report', 14, 15)
   doc.setFontSize(10)
   doc.text(`Filter: ${reportType.value.toUpperCase()}`, 14, 22)
   if (startDate.value || endDate.value) {
-    doc.text(`Periode: ${startDate.value || '...'} s/d ${endDate.value || '...'}`, 14, 28)
+    doc.text(`Period: ${startDate.value || '...'} to ${endDate.value || '...'}`, 14, 28)
   }
 
   const startY = (startDate.value || endDate.value) ? 34 : 28
@@ -111,15 +111,15 @@ function cetakPDF() {
   let tableBody = []
 
   if (reportType.value === 'semua' || reportType.value === 'menipis') {
-    tableHead = [['No', 'Nama Barang', 'Satuan', 'Stok Awal', 'Masuk', 'Keluar', 'Opname Detail', 'Sisa Stok']]
+    tableHead = [['No', 'Product Name', 'Unit', 'Init Stock', 'Inbound', 'Outbound', 'Adjustment Details', 'Remaining Stock']]
     tableBody = reportData.value.map((p, i) => [
       i + 1, p.name, p.satuan, p.stock_awal, `+${p.totalMasuk}`, `-${p.totalKeluar}`, 
       p.opnames.map(o => `${o.tipe === 'penambahan' ? '+' : '-'}${o.stock} (${o.keterangan})`).join('\n') || '-',
       p.stock_saat_ini
     ])
   } else {
-    const label = reportType.value === 'masuk' ? 'Masuk' : 'Keluar'
-    tableHead = [['No', 'Tanggal', 'Nama Barang', 'Satuan', `Jumlah ${label}`, 'Opname Detail', 'Sisa Stok']]
+    const label = reportType.value === 'masuk' ? 'Inbound' : 'Outbound'
+    tableHead = [['No', 'Date', 'Product Name', 'Unit', `Total ${label}`, 'Adjustment Details', 'Remaining Stock']]
     tableBody = reportData.value.map((p, i) => [
       i + 1, new Date(p.created_at).toLocaleDateString('id-ID'), p.name, p.satuan, 
       reportType.value === 'masuk' ? `+${p.jumlah}` : `-${p.jumlah}`,
@@ -129,7 +129,7 @@ function cetakPDF() {
   }
 
   autoTable(doc, { startY, head: tableHead, body: tableBody })
-  doc.save(`Laporan_${reportType.value}.pdf`)
+  doc.save(`Report_${reportType.value}.pdf`)
 }
 
 onMounted(() => { fetchBarangs() })
@@ -138,13 +138,22 @@ onMounted(() => { fetchBarangs() })
 <template>
   <DashboardLayout :navLinks="navLinks">
     <div class="hero">
-      <h1>Dashboard <span class="gradient-text">Manager</span></h1>
+      <h1>Manager <span class="gradient-text">Dashboard</span></h1>
+    </div>
+
+    <div class="cards">
+      <router-link to="/manager/purchase-orders" class="card">
+        <div class="card-glow green"></div>
+        <span class="card-label">PO Approval</span>
+        <span class="card-desc">Review & Approve Purchase Orders</span>
+        <span class="card-arrow">→</span>
+      </router-link>
     </div>
 
     <div class="glass-card filter-card">
       <div class="filter-top">
         <div class="filter-title">
-          <strong>Filter Laporan</strong>
+          <strong>Report Filter</strong>
         </div>
         <button class="btn-ghost" @click="resetFilter" v-if="hasFilter">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
@@ -153,68 +162,68 @@ onMounted(() => { fetchBarangs() })
       </div>
       <div class="filter-row">
         <div class="filter-group">
-          <label>Jenis Laporan</label>
+          <label>Report Type</label>
           <select v-model="reportType">
-            <option value="semua">Semua</option>
-            <option value="masuk">Barang Masuk</option>
-            <option value="keluar">Barang Keluar</option>
-            <option value="menipis">Stok Menipis</option>
+            <option value="semua">All</option>
+            <option value="masuk">Inbound</option>
+            <option value="keluar">Outbound</option>
+            <option value="menipis">Low Stock</option>
           </select>
         </div>
         <div class="filter-group">
-          <label>Dari Tanggal</label>
+          <label>From Date</label>
           <input type="date" v-model="startDate" />
         </div>
         <div class="filter-group">
-          <label>Sampai Tanggal</label>
+          <label>To Date</label>
           <input type="date" v-model="endDate" />
         </div>
       </div>
-      <p v-if="hasFilter" class="filter-info">Menampilkan data laporan berdasarkan filter yang terpilih.</p>
+      <p v-if="hasFilter" class="filter-info">Displaying report data based on selected filters.</p>
     </div>
 
     <div class="export-row no-print">
       <button class="btn-primary" @click="cetakPDF">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7"></path><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
-        Cetak Laporan / Simpan PDF
+        Print Report / Save PDF
       </button>
     </div>
 
     <div v-if="isLoading" class="loading-state">
       <div class="spinner-lg"></div>
-      <span>Memuat data laporan...</span>
+      <span>Loading report data...</span>
     </div>
     <div v-else class="glass-card table-card">
       <table>
         <thead>
           <tr v-if="reportType === 'semua' || reportType === 'menipis'">
             <th>No</th>
-            <th>Tanggal</th>
-            <th>Nama Barang</th>
-            <th>Satuan</th>
-            <th>Stok Awal</th>
-            <th>Total Masuk</th>
-            <th>Total Keluar</th>
-            <th>Opname</th>
-            <th>Sisa Stok</th>
+            <th>Date</th>
+            <th>Product Name</th>
+            <th>Unit</th>
+            <th>Init Stock</th>
+            <th>Total Inbound</th>
+            <th>Total Outbound</th>
+            <th>Adjustment</th>
+            <th>Remaining Stock</th>
           </tr>
           <tr v-else-if="reportType === 'masuk'">
             <th>No</th>
-            <th>Tanggal</th>
-            <th>Nama Barang</th>
-            <th>Satuan</th>
-            <th>Total Masuk (+)</th>
-            <th>Opname</th>
-            <th>Sisa Stok</th>
+            <th>Date</th>
+            <th>Product Name</th>
+            <th>Unit</th>
+            <th>Total Inbound (+)</th>
+            <th>Adjustment</th>
+            <th>Remaining Stock</th>
           </tr>
           <tr v-else-if="reportType === 'keluar'">
             <th>No</th>
-            <th>Tanggal</th>
-            <th>Nama Barang</th>
-            <th>Satuan</th>
-            <th>Total Keluar (-)</th>
-            <th>Opname</th>
-            <th>Sisa Stok</th>
+            <th>Date</th>
+            <th>Product Name</th>
+            <th>Unit</th>
+            <th>Total Outbound (-)</th>
+            <th>Adjustment</th>
+            <th>Remaining Stock</th>
           </tr>
         </thead>
         <tbody>
@@ -281,7 +290,7 @@ onMounted(() => { fetchBarangs() })
 
           <tr v-if="!reportData.length">
             <td :colspan="reportType === 'semua' || reportType === 'menipis' ? 9 : 8" class="empty-cell">
-              {{ hasFilter ? 'Tidak ada data laporan dalam rentang waktu ini.' : 'Belum ada data.' }}
+              {{ hasFilter ? 'No report data in this date range.' : 'No data available.' }}
             </td>
           </tr>
         </tbody>
@@ -304,6 +313,33 @@ onMounted(() => { fetchBarangs() })
   border: 1px solid var(--border-default);
   border-radius: var(--radius-lg);
   overflow: hidden;
+}
+
+/* Cards */
+.cards {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px; margin-bottom: 24px;
+}
+.card {
+  position: relative; background: var(--bg-surface); border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg); padding: 28px 24px; text-decoration: none;
+  overflow: hidden; display: flex; flex-direction: column; gap: 4px;
+}
+.card:hover {
+  border-color: var(--border-strong); transform: translateY(-4px); box-shadow: var(--shadow-md);
+}
+.card:hover .card-glow { opacity: 1; }
+.card:hover .card-arrow { opacity: 1; transform: translateX(0); }
+.card-glow {
+  position: absolute; top: -40px; right: -40px;
+  width: 120px; height: 120px; border-radius: 50%;
+  filter: blur(40px); opacity: 0; transition: opacity 0.4s;
+}
+.card-glow.green { background: #f97316; }
+.card-label { font-size: 16px; font-weight: 700; color: var(--text-primary); }
+.card-desc { font-size: 13px; color: var(--text-muted); }
+.card-arrow {
+  position: absolute; top: 24px; right: 24px; font-size: 18px;
+  color: var(--accent); opacity: 0; transform: translateX(-8px); transition: all 0.3s;
 }
 
 /* Filter */

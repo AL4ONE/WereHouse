@@ -4,6 +4,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BarangController;
 use App\Http\Controllers\BarangKeluarController;
 use App\Http\Controllers\BarangMasukController;
+use App\Http\Controllers\PurchaseOrderController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Middleware\AdminMiddleware;
 use App\Http\Middleware\AuthMiddleware;
@@ -48,5 +49,15 @@ Route::middleware(AuthMiddleware::class)->group(function () {
         Route::post("products/{id}", [BarangController::class, "update"]);
         Route::post("products/{id}/op-name", [BarangController::class, "addOpName"]);
         Route::get("products/op-name", [BarangController::class, "opName"]);
+
+        // Purchase Order routes
+        Route::get("/purchase-orders", [PurchaseOrderController::class, "index"]);
+        Route::post("/purchase-orders", [PurchaseOrderController::class, "store"]);
+        Route::get("/purchase-orders/{id}", [PurchaseOrderController::class, "show"]);
+        Route::post("/purchase-orders/{id}", [PurchaseOrderController::class, "update"]);
+        Route::delete("/purchase-orders/{id}", [PurchaseOrderController::class, "destroy"]);
+        Route::post("/purchase-orders/{id}/approve", [PurchaseOrderController::class, "approve"]);
+        Route::post("/purchase-orders/{id}/receive", [PurchaseOrderController::class, "receive"]);
+        Route::post("/purchase-orders/{id}/cancel", [PurchaseOrderController::class, "cancel"]);
     });
 });

@@ -1,6 +1,8 @@
 <script setup>
-import { ref, onMounted, nextTick } from 'vue'
+import { ref, onMounted, nextTick, computed } from 'vue'
 import JsBarcode from 'jsbarcode'
+import jsPDF from 'jspdf'
+import autoTable from 'jspdf-autotable'
 import api from '@/api'
 import DashboardLayout from '@/layouts/DashboardLayout.vue'
 import { useAuthStore } from '@/stores/auth'
@@ -12,6 +14,7 @@ const navLinks = isAdmin ? adminNavLinks : petugasNavLinks
 
 const barangs = ref([])
 const allSuppliers = ref([])
+const searchQuery = ref('')
 const isLoading = ref(false)
 const showModal = ref(false)
 const isEditing = ref(false)
@@ -19,7 +22,7 @@ const isOpNaming = ref(false)
 const isAssigning = ref(false)
 const editId = ref(null)
 const msg = ref({ text: '', type: '' })
-const form = ref({ kode_barang: '', name: '', stock: 0, satuan: '', harga: 0, min_stock: 0, supplier_ids: [] })
+const form = ref({ kode_barang: '', name: '', placement: '', stock: 0, satuan: '', harga: 0, min_stock: 0, supplier_ids: [] })
 const showBarcodeModal = ref(false)
 const selectedBarcode = ref('')
 const formOpName = ref({ stock: 0, keterangan: '', tipe: '' })
@@ -59,6 +62,17 @@ async function fetchBarangs() {
     isLoading.value = false 
   }
 }
+
+const filteredBarangs = computed(() => {
+  if (!searchQuery.value) return barangs.value
+  const q = searchQuery.value.toLowerCase()
+  return barangs.value.filter(p => 
+    p.name.toLowerCase().includes(q) || 
+    (p.kode_barang && p.kode_barang.toLowerCase().includes(q)) ||
+    (p.placement && p.placement.toLowerCase().includes(q))
+  )
+})
+
 async function fetchSuppliers() {
   if (!isAdmin) return
   try { 
@@ -75,7 +89,7 @@ function openCreate() {
   isOpNaming.value = false; 
   isAssigning.value = false; 
   editId.value = null; 
-  form.value = { kode_barang: '', name: '', stock: 0, satuan: '', harga: 0, min_stock: 0, supplier_ids: [] }; 
+  form.value = { kode_barang: '', name: '', placement: '', stock: 0, satuan: '', harga: 0, min_stock: 0, supplier_ids: [] }; 
   showModal.value = true 
 }
 function openEdit(p) {
@@ -86,6 +100,7 @@ function openEdit(p) {
   form.value = { 
     kode_barang: p.kode_barang, 
     name: p.name, 
+    placement: p.placement || '',
     stock: p.stock_saat_ini, 
     satuan: p.satuan, 
     harga: p.harga, 
@@ -115,30 +130,31 @@ async function handleSubmit() {
   try {
     if (isOpNaming.value) { 
       await api.post(`/products/${editId.value}/op-name`, formOpName.value); 
-      msg.value = { text: 'Opname berhasil ditambahkan!', type: 'ok' } 
+      msg.value = { text: 'Stock adjustment added successfully!', type: 'ok' } 
     }
     else if (isAssigning.value) { 
       await api.post(`/products/${editId.value}/suppliers`, formAssign.value); 
-      msg.value = { text: 'Supplier berhasil di-assign!', type: 'ok' } 
+      msg.value = { text: 'Supplier assigned successfully!', type: 'ok' } 
     }
     else if (isEditing.value) { 
-      await api.post(`/products/${editId.value}`, form.value); 
-      msg.value = { text: 'Barang diupdate!', type: 'ok' } 
+      const payload = { kode_barang: form.value.kode_barang, name: form.value.name, placement: form.value.placement, stock_awal: form.value.stock, stock_saat_ini: form.value.stock, satuan: form.value.satuan, harga: form.value.harga, min_stock: form.value.min_stock, supplier_ids: form.value.supplier_ids }
+      await api.post(`/products/${editId.value}`, payload); 
+      msg.value = { text: 'Product updated!', type: 'ok' } 
     }
     else { 
-      const payload = { kode_barang: form.value.kode_barang, name: form.value.name, stock_awal: form.value.stock, stock_saat_ini: form.value.stock, satuan: form.value.satuan, harga: form.value.harga, min_stock: form.value.min_stock, supplier_ids: form.value.supplier_ids }
+      const payload = { kode_barang: form.value.kode_barang, name: form.value.name, placement: form.value.placement, stock_awal: form.value.stock, stock_saat_ini: form.value.stock, satuan: form.value.satuan, harga: form.value.harga, min_stock: form.value.min_stock, supplier_ids: form.value.supplier_ids }
       await api.post('/products', payload); 
-      msg.value = { text: 'Barang ditambahkan!', type: 'ok' } 
+      msg.value = { text: 'Product added!', type: 'ok' } 
     }
     showModal.value = false; fetchBarangs()
   } catch (e) { console.log(e) }
 }
 
 async function handleDelete(id) {
-  if (!confirm('Hapus barang ini?')) return
+  if (!confirm('Delete this product?')) return
   try { 
     await api.delete(`/products/${id}`); 
-    msg.value = { text: 'Barang dihapus!', type: 'ok' }; 
+    msg.value = { text: 'Product deleted!', type: 'ok' }; 
     fetchBarangs() 
   }
   catch (e) { 
@@ -153,6 +169,18 @@ onMounted(() => {
 function formatRupiah(n) {
   return 'Rp ' + Number(n).toLocaleString('id-ID')
 }
+
+const hargaFormatted = computed({
+  get() {
+    const val = form.value.harga
+    if (val === 0 || val === '' || val === null) return ''
+    return Number(val).toLocaleString('id-ID')
+  },
+  set(v) {
+    const raw = String(v).replace(/\./g, '').replace(/[^0-9]/g, '')
+    form.value.harga = raw ? Number(raw) : 0
+  }
+})
 
 function openBarcode(code) {
   selectedBarcode.value = code
@@ -175,19 +203,62 @@ function printBarcode() {
   win.document.close()
   setTimeout(() => { win.print(); win.close(); }, 500)
 }
+
+function cetakPDF() {
+  const doc = new jsPDF()
+  doc.setFontSize(18)
+  doc.text('Inventory Report', 14, 22)
+  doc.setFontSize(11)
+  doc.text(`Generated on: ${new Date().toLocaleDateString('id-ID')}`, 14, 30)
+
+  const bodyData = barangs.value.map((p, i) => {
+    const suppliers = p.suppliers && p.suppliers.length > 0 
+      ? p.suppliers.map(s => s.name).join(', ') 
+      : '-'
+    
+    return [
+      i + 1,
+      p.name,
+      p.placement || '-',
+      p.satuan,
+      suppliers,
+      p.stock_saat_ini
+    ]
+  })
+
+  autoTable(doc, {
+    startY: 36,
+    head: [['No', 'Product Name', 'Placement', 'Unit', 'Supplier', 'Stock']],
+    body: bodyData,
+    headStyles: { fillColor: [245, 158, 11] }, // Match accent color
+  })
+
+  doc.save('Inventory_Report.pdf')
+}
 </script>
 
 <template>
   <DashboardLayout :navLinks="navLinks">
     <div class="top-row">
       <div>
-        <h1 class="page-title">Data <span class="gradient-text">Barang</span></h1>
+        <h1 class="page-title">Data <span class="gradient-text">Products</span></h1>
       </div>
-      <div v-if="isAdmin">
-        <button class="btn-primary" @click="openCreate">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Tambah Barang
+      <div class="header-actions">
+        <button class="btn-ghost" @click="cetakPDF">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          Export Report
         </button>
+        <button v-if="isAdmin" class="btn-primary" @click="openCreate">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add Product
+        </button>
+      </div>
+    </div>
+
+    <div class="filters-row">
+      <div class="search-wrapper">
+        <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        <input v-model="searchQuery" type="text" placeholder="Search by name, code, or placement..." />
       </div>
     </div>
 
@@ -196,49 +267,51 @@ function printBarcode() {
     <div class="glass-card table-card">
       <div v-if="isLoading" class="loading">
         <div class="spinner-lg"></div>
-        <span>Memuat data...</span>
+        <span>Loading data...</span>
       </div>
       <table v-else>
         <thead>
           <tr>
-            <th>No</th><th>Kode</th><th>Nama Barang</th><th>Stok Awal</th><th>Stok Saat Ini</th><th>Min Stok</th><th>Satuan</th><th>Harga</th>
-            <th v-if="isAdmin">Supplier</th><th>Riwayat Opname</th><th>Aksi</th>
+            <th>No</th><th>Code</th><th>Product Name</th><th>Placement</th><th>Unit</th>
+            <th v-if="isAdmin">Supplier</th><th>Init Stock</th><th>Current Stock</th><th>Min Stock</th><th>Adjustment History</th><th>Price</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="(p, i) in barangs" :key="p.id">
+          <tr v-for="(p, i) in filteredBarangs" :key="p.id">
             <td class="num-cell">{{ i + 1 }}</td>
             <td class="name-cell text-center">
               <svg v-if="p.kode_barang" :id="'barcode-' + p.id" class="inline-barcode"></svg>
-              <span v-else class="muted">Belum ada</span>
+              <span v-else class="muted">None</span>
             </td>
             <td class="name-cell">{{ p.name }}</td>
+            <td>{{ p.placement || '-' }}</td>
+            <td>{{ p.satuan }}</td>
+            <td v-if="isAdmin">
+              <span v-if="p.suppliers?.length" class="badge-row">
+                <span v-for="s in p.suppliers" :key="s.id" class="badge">{{ s.name }}</span>
+              </span>
+              <span v-else class="muted">None</span>
+            </td>
             <td class="num-cell">{{ p.stock_awal }}</td>
             <td class="num-cell">
               <span class="stock-pill" :class="p.stock_saat_ini <= p.min_stock ? 'low' : ''">{{ p.stock_saat_ini }}</span>
             </td>
             <td class="num-cell"><span class="badge-min">{{ p.min_stock }}</span></td>
-            <td>{{ p.satuan }}</td>
-            <td class="num-cell">{{ formatRupiah(p.harga || 0) }}</td>
-            <td v-if="isAdmin">
-              <span v-if="p.suppliers?.length" class="badge-row">
-                <span v-for="s in p.suppliers" :key="s.id" class="badge">{{ s.name }}</span>
-              </span>
-              <span v-else class="muted">Belum ada</span>
-            </td>
             <td>
               <div v-for="op in p.status_op_names" :key="op.id" class="op-item">
                 <span :class="op.tipe === 'penambahan' ? 'ok' : 'err'">{{ op.tipe === 'penambahan' ? '+' : '-' }}{{ op.stock }}</span>
                 <small class="op-ket">({{ op.keterangan }})</small>
               </div>
-              <span v-if="!p.status_op_names?.length" class="muted">Belum ada</span>
+              <span v-if="!p.status_op_names?.length" class="muted">None</span>
             </td>
+            <td class="num-cell">{{ formatRupiah(p.harga || 0) }}</td>
             <td class="actions">
               <button v-if="p.kode_barang" class="chip-btn" @click="openBarcode(p.kode_barang)">Barcode</button>
               <button v-if="isAdmin" class="chip-btn teal" @click="openEdit(p)">Edit</button>
               <button v-if="isAdmin" class="chip-btn amber" @click="openAssignSupplier(p)">Supplier</button>
-              <button class="chip-btn teal" @click="openOpName(p)">Opname</button>
-              <button v-if="isAdmin" class="chip-btn red" @click="handleDelete(p.id)">Hapus</button>
+              <button class="chip-btn teal" @click="openOpName(p)">Adjust</button>
+              <button v-if="isAdmin" class="chip-btn red" @click="handleDelete(p.id)">Delete</button>
             </td>
           </tr>
         </tbody>
@@ -249,47 +322,44 @@ function printBarcode() {
       <div v-if="showModal" class="overlay" @click.self="showModal = false">
         <div class="modal">
           <div class="modal-header">
-            <h2>{{ isAssigning ? 'Assign Supplier' : (isOpNaming ? 'Tambah Opname' : (isEditing ? 'Edit Produk' : 'Tambah Produk')) }}</h2>
+            <h2>{{ isAssigning ? 'Assign Supplier' : (isOpNaming ? 'Stock Adjustment' : (isEditing ? 'Edit Product' : 'Add Product')) }}</h2>
             <button class="modal-close" @click="showModal = false">✕</button>
           </div>
 
           <form v-if="isOpNaming" @submit.prevent="handleSubmit">
-            <div class="field"><label>Jumlah Stok</label><input v-model.number="formOpName.stock" type="number" min="1" required /></div>
-            <div class="field"><label>Tipe</label>
-              <select v-model="formOpName.tipe" required><option value="penambahan">Penambahan (+)</option><option value="pengurangan">Pengurangan (-)</option></select>
+            <div class="field"><label>Stock Amount</label><input v-model.number="formOpName.stock" type="number" min="1" required /></div>
+            <div class="field"><label>Type</label>
+              <select v-model="formOpName.tipe" required><option value="penambahan">Addition (+)</option><option value="pengurangan">Reduction (-)</option></select>
             </div>
-            <div class="field"><label>Keterangan</label><input v-model="formOpName.keterangan" placeholder="Alasan opname" required /></div>
-            <div class="modal-btns"><button type="button" class="btn-ghost" @click="showModal = false">Batal</button><button type="submit" class="btn-primary">Simpan Opname</button></div>
+            <div class="field"><label>Notes</label><input v-model="formOpName.keterangan" placeholder="Reason for adjustment" required /></div>
+            <div class="modal-btns"><button type="button" class="btn-ghost" @click="showModal = false">Cancel</button><button type="submit" class="btn-primary">Save Adjustment</button></div>
           </form>
 
           <form v-else-if="isAssigning" @submit.prevent="handleSubmit">
-            <div class="field"><label>Pilih Supplier</label>
+            <div class="field"><label>Select Supplier</label>
               <div class="checkbox-group"><label v-for="sup in allSuppliers" :key="sup.id" class="checkbox-item"><input type="checkbox" :value="sup.id" v-model="formAssign.supplier_ids" /><span>{{ sup.name }}</span></label></div>
-              <span v-if="!allSuppliers.length" class="hint">Belum ada supplier. Tambah supplier dulu.</span>
+              <span v-if="!allSuppliers.length" class="hint">No supplier yet. Add supplier first.</span>
             </div>
-            <div class="modal-btns"><button type="button" class="btn-ghost" @click="showModal = false">Batal</button><button type="submit" class="btn-primary">Simpan</button></div>
+            <div class="modal-btns"><button type="button" class="btn-ghost" @click="showModal = false">Cancel</button><button type="submit" class="btn-primary">Save</button></div>
           </form>
 
           <form v-else @submit.prevent="handleSubmit">
             <div class="field">
-              <label>Kode Barang</label>
+              <label>Product Code</label>
               <div class="flex-input">
-                <input v-model="form.kode_barang" placeholder="Contoh: PRD-001" required />
+                <input v-model="form.kode_barang" placeholder="Example: PRD-001" required />
                 <button type="button" class="btn-ghost small" @click="form.kode_barang = 'PRD-' + Math.floor(Math.random()*10000).toString().padStart(4, '0')">Generate</button>
               </div>
             </div>
-            <div class="field"><label>Nama Barang</label><input v-model="form.name" placeholder="Nama produk" required /></div>
-            <div class="field"><label>Stock</label><input v-model.number="form.stock" type="number" min="0" required /></div>
-            <div class="field"><label>Satuan</label><input v-model="form.satuan" placeholder="pcs, kg, liter, dll" required /></div>
+            <div class="field"><label>Product Name</label><input v-model="form.name" placeholder="Product name" required /></div>
+            <div class="field"><label>Placement</label><input v-model="form.placement" placeholder="e.g. Shelf A1" /></div>
+            <div class="field"><label>Init Stock</label><input v-model.number="form.stock" type="number" min="0" required /></div>
+            <div class="field"><label>Unit</label><input v-model="form.satuan" placeholder="pcs, kg, liters, etc" required /></div>
             <div class="field-row">
-                <div class="field"><label>Harga (Rp)</label><input v-model.number="form.harga" type="number" min="0" required /></div>
-                <div class="field"><label>Min Stok</label><input v-model.number="form.min_stock" type="number" min="0" required /></div>
+                <div class="field"><label>Price (Rp)</label><input v-model="hargaFormatted" type="text" inputmode="numeric" placeholder="0" required /></div>
+                <div class="field"><label>Min Stock</label><input v-model.number="form.min_stock" type="number" min="0" required /></div>
             </div>
-            <div v-if="isAdmin" class="field"><label>Supplier (opsional)</label>
-              <div class="checkbox-group"><label v-for="sup in allSuppliers" :key="sup.id" class="checkbox-item"><input type="checkbox" :value="sup.id" v-model="form.supplier_ids" /><span>{{ sup.name }}</span></label></div>
-              <span v-if="!allSuppliers.length" class="hint">Belum ada supplier.</span>
-            </div>
-            <div class="modal-btns"><button type="button" class="btn-ghost" @click="showModal = false">Batal</button><button type="submit" class="btn-primary">Simpan</button></div>
+            <div class="modal-btns"><button type="button" class="btn-ghost" @click="showModal = false">Cancel</button><button type="submit" class="btn-primary">Save</button></div>
           </form>
         </div>
       </div>
@@ -299,14 +369,14 @@ function printBarcode() {
       <div v-if="showBarcodeModal" class="overlay" @click.self="showBarcodeModal = false">
         <div class="modal text-center">
           <div class="modal-header">
-            <h2>Barcode Produk</h2>
+            <h2>Product Barcode</h2>
             <button class="modal-close" @click="showBarcodeModal = false">✕</button>
           </div>
           <div class="barcode-wrapper">
             <svg id="barcodeCanvas"></svg>
           </div>
           <div class="modal-btns" style="justify-content: center; margin-top: 24px;">
-            <button class="btn-primary" @click="printBarcode">Cetak Barcode</button>
+            <button class="btn-primary" @click="printBarcode">Print Barcode</button>
           </div>
         </div>
       </div>
@@ -316,9 +386,20 @@ function printBarcode() {
 
 <style scoped>
 .top-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; }
+.header-actions { display: flex; gap: 12px; }
 .page-title { font-size: 26px; font-weight: 800; color: var(--text-primary); margin-bottom: 4px; }
 .gradient-text { background: linear-gradient(135deg, var(--accent), #f59e0b); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
 .page-desc { font-size: 14px; color: var(--text-muted); }
+
+.filters-row { margin-bottom: 18px; display: flex; }
+.search-wrapper { position: relative; width: 100%; max-width: 400px; }
+.search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted); }
+.search-wrapper input { 
+  width: 100%; padding: 10px 14px 10px 36px; border: 1px solid var(--border-default); 
+  border-radius: var(--radius-sm); background: var(--bg-surface); color: var(--text-primary); 
+  font-size: 14px; outline: none; transition: all 0.2s;
+}
+.search-wrapper input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
 
 .btn-primary {
   display: flex; align-items: center; gap: 6px;

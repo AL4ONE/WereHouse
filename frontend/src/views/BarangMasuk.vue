@@ -1,5 +1,7 @@
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'
+import jsPDF from 'jspdf'
+import autoTable from 'jspdf-autotable'
 import api from '@/api'
 import DashboardLayout from '@/layouts/DashboardLayout.vue'
 import { useAuthStore } from '@/stores/auth'
@@ -13,6 +15,8 @@ const inventoryIns = ref([])
 const msg = ref({ text: '', type: '' })
 const isSubmitting = ref(false)
 const editId = ref(null)
+const showPrintModal = ref(false)
+const printFilter = ref('today')
 
 const form = ref({ barang_id: '', supplier_id: '', stock: 1 })
 const barcodeInput = ref('')
@@ -24,13 +28,13 @@ function handleBarcodeScan() {
   if (match) {
     form.value.barang_id = match.id
     barcodeInput.value = ''
-    msg.value = { text: `Barcode terdeteksi: ${match.name}`, type: 'ok' }
+    msg.value = { text: `Barcode detected: ${match.name}`, type: 'ok' }
     // Focus quantity field after selecting product
     setTimeout(() => {
       stockInput.value?.focus()
     }, 100)
   } else {
-    msg.value = { text: 'Barcode tidak terdaftar!', type: 'error' }
+    msg.value = { text: 'Barcode not registered!', type: 'error' }
   }
 }
 
@@ -79,18 +83,18 @@ async function handleSubmit() {
   try {
     if (editId.value) {
       await api.post(`/inventory-in/${editId.value}`, form.value)
-      msg.value = { text: 'Data barang masuk berhasil diupdate!', type: 'ok' }
+      msg.value = { text: 'Inbound stock data updated successfully!', type: 'ok' }
       editId.value = null
     } else {
       await api.post('/inventory-in', form.value)
-      msg.value = { text: 'Catatan barang masuk berhasil ditambahkan!', type: 'ok' }
+      msg.value = { text: 'Inbound stock record added successfully!', type: 'ok' }
     }
     form.value = { barang_id: '', supplier_id: '', stock: 1 }
     fetchBarangs()
     fetchInventoryIn()
   } catch (e) { 
     console.log(e)
-    msg.value = { text: e.response?.data?.error ? 'Validasi error, periksa kembali inputan' : 'Terjadi kesalahan sistem', type: 'error' }
+    msg.value = { text: e.response?.data?.error ? 'Validation error, please check input' : 'System error occurred', type: 'error' }
   } finally { isSubmitting.value = false }
 }
 
@@ -104,16 +108,16 @@ function handleEdit(item) {
 }
 
 async function handleDelete(id) {
-  if(!confirm('Yakin ingin menghapus data ini? Stok barang akan disesuaikan kembali.')) return;
+  if(!confirm('Are you sure you want to delete this data? Stock will be readjusted.')) return;
   msg.value = { text: '', type: '' }
   try {
     await api.delete(`/inventory-in/${id}`)
-    msg.value = { text: 'Data barang masuk berhasil dihapus!', type: 'ok' }
+    msg.value = { text: 'Inbound stock data deleted successfully!', type: 'ok' }
     fetchBarangs()
     fetchInventoryIn()
   } catch (e) {
     console.log(e)
-    msg.value = { text: 'Gagal menghapus data', type: 'error' }
+    msg.value = { text: 'Failed to delete data', type: 'error' }
   }
 }
 
@@ -126,12 +130,56 @@ onMounted(() => {
   fetchBarangs() 
   fetchInventoryIn()
 })
+
+function cetakPDF() {
+  const doc = new jsPDF()
+  doc.setFontSize(18)
+  
+  let title = 'Inbound Stock Report'
+  let filteredData = inventoryIns.value
+
+  if (printFilter.value === 'today') {
+    title = 'Today\'s Inbound Stock Report'
+    const todayStr = new Date().toDateString()
+    filteredData = inventoryIns.value.filter(item => new Date(item.created_at).toDateString() === todayStr)
+  }
+
+  doc.text(title, 14, 22)
+  doc.setFontSize(11)
+  doc.text(`Generated on: ${new Date().toLocaleDateString('id-ID')}`, 14, 30)
+
+  const bodyData = filteredData.map((item, i) => {
+    return [
+      i + 1,
+      new Date(item.created_at).toLocaleDateString(),
+      item.barang?.name || '-',
+      item.barang?.placement || '-',
+      item.barang?.satuan || '-',
+      item.supplier?.name || '-',
+      item.stock
+    ]
+  })
+
+  autoTable(doc, {
+    startY: 36,
+    head: [['No', 'Date', 'Product Name', 'Placement', 'Unit', 'Supplier', 'Received Qty']],
+    body: bodyData,
+    headStyles: { fillColor: [245, 158, 11] }, // Match accent color
+  })
+
+  doc.save(`Inbound_Report_${printFilter.value}.pdf`)
+  showPrintModal.value = false
+}
 </script>
 
 <template>
   <DashboardLayout :navLinks="navLinks">
     <div class="hero">
-      <h1>Barang <span class="gradient-text">Masuk</span></h1>
+      <h1>Inbound <span class="gradient-text">Stock</span></h1>
+      <button class="btn-ghost" @click="showPrintModal = true">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        Print Placement Report
+      </button>
     </div>
 
     <div v-if="msg.text" class="alert" :class="msg.type">
@@ -141,63 +189,63 @@ onMounted(() => {
 
     <div class="content-grid">
       <div class="glass-card form-card">
-        <h3 class="card-title">{{ editId ? 'Edit Barang Masuk' : 'Tambah Barang Masuk' }}</h3>
+        <h3 class="card-title">{{ editId ? 'Edit Inbound Stock' : 'Add Inbound Stock' }}</h3>
         <form @submit.prevent="handleSubmit">
           <div class="field barcode-scan-field">
-            <label>Scan Barcode (Opsional)</label>
+            <label>Scan Barcode (Optional)</label>
             <div class="input-with-icon">
               <svg class="scan-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7V5a2 2 0 0 1 2-2h2"></path><path d="M17 3h2a2 2 0 0 1 2 2v2"></path><path d="M21 17v2a2 2 0 0 1-2 2h-2"></path><path d="M7 21H5a2 2 0 0 1-2-2v-2"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg>
-              <input v-model="barcodeInput" @keydown.enter.prevent="handleBarcodeScan" placeholder="Klik & scan di sini..." />
+              <input v-model="barcodeInput" @keydown.enter.prevent="handleBarcodeScan" placeholder="Click & scan here..." />
             </div>
-            <small class="hint">Arahkan scanner ke barcode lalu tekan enter</small>
+            <small class="hint">Point scanner to barcode and press enter</small>
           </div>
           <div class="field">
-            <label>Produk</label>
+            <label>Product</label>
             <select v-model="form.barang_id" required>
-              <option value="" disabled>-- Pilih Produk --</option>
-              <option v-for="p in barangs" :key="p.id" :value="p.id">{{ p.name }} (stok: {{ p.stock_saat_ini }})</option>
+              <option value="" disabled>-- Select Product --</option>
+              <option v-for="p in barangs" :key="p.id" :value="p.id">{{ p.name }} (stock: {{ p.stock_saat_ini }})</option>
             </select>
           </div>
           <div class="field">
             <label>Supplier</label>
             <select v-model="form.supplier_id" required :disabled="!form.barang_id">
-              <option value="" disabled>{{ form.barang_id ? '-- Pilih Supplier --' : '-- Pilih Produk dulu --' }}</option>
+              <option value="" disabled>{{ form.barang_id ? '-- Select Supplier --' : '-- Select Product First --' }}</option>
               <option v-for="sup in filteredSuppliers" :key="sup.id" :value="sup.id">{{ sup.name }}</option>
             </select>
           </div>
           <div class="field">
-            <label>Jumlah Barang Masuk</label>
+            <label>Inbound Quantity</label>
             <input ref="stockInput" v-model.number="form.stock" type="number" min="1" required />
           </div>
           <div v-if="selectedBarang" class="pricing-info">
-            <p>Harga per barang: <strong>{{ formatRupiah(selectedBarang.harga) }}</strong></p>
-            <p>Total Harga: <strong>{{ formatRupiah(totalHarga) }}</strong></p>
+            <p>Price per item: <strong>{{ formatRupiah(selectedBarang.harga) }}</strong></p>
+            <p>Total Price: <strong>{{ formatRupiah(totalHarga) }}</strong></p>
           </div>
           <div class="form-actions">
             <button type="submit" class="btn-submit orange" :disabled="isSubmitting">
               <span v-if="isSubmitting" class="spinner"></span>
-              {{ isSubmitting ? 'Memproses...' : (editId ? 'Update' : 'Simpan Barang Masuk') }}
+              {{ isSubmitting ? 'Processing...' : (editId ? 'Update' : 'Save Inbound Stock') }}
             </button>
             <button v-if="editId" type="button" class="btn-cancel" @click="cancelEdit" :disabled="isSubmitting">
-              Batal
+              Cancel
             </button>
           </div>
         </form>
       </div>
 
       <div class="glass-card table-section">
-        <h3 class="card-title">Riwayat Barang Masuk</h3>
+        <h3 class="card-title">Inbound Stock History</h3>
         <div class="table-container">
           <table class="inventory-table">
             <thead>
               <tr>
-                <th>Tanggal</th>
-                <th>Produk</th>
+                <th>Date</th>
+                <th>Product</th>
                 <th>Supplier</th>
-                <th>Harga Satuan</th>
-                <th>Jumlah Masuk</th>
-                <th>Total Harga</th>
-                <th>Aksi</th>
+                <th>Unit Price</th>
+                <th>Inbound Qty</th>
+                <th>Total Price</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -220,18 +268,40 @@ onMounted(() => {
                 </td>
               </tr>
               <tr v-if="inventoryIns.length === 0">
-                <td colspan="7" class="empty-state">Belum ada data barang masuk.</td>
+                <td colspan="7" class="empty-state">No inbound stock data.</td>
               </tr>
             </tbody>
           </table>
         </div>
       </div>
     </div>
+
+    <transition name="modal">
+      <div v-if="showPrintModal" class="overlay" @click.self="showPrintModal = false">
+        <div class="modal">
+          <div class="modal-header">
+            <h2>Export Placement Report</h2>
+            <button class="modal-close" @click="showPrintModal = false">✕</button>
+          </div>
+          <div class="field">
+            <label>Report Type</label>
+            <select v-model="printFilter">
+              <option value="today">Today's Inbound Stock</option>
+              <option value="all">All Inbound Stock</option>
+            </select>
+          </div>
+          <div class="modal-btns">
+            <button class="btn-cancel" @click="showPrintModal = false">Cancel</button>
+            <button class="btn-submit orange" @click="cetakPDF">Export PDF</button>
+          </div>
+        </div>
+      </div>
+    </transition>
   </DashboardLayout>
 </template>
 
 <style scoped>
-.hero { margin-bottom: 24px; }
+.hero { margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
 .hero h1 { font-size: 26px; font-weight: 800; color: var(--text-primary); margin-bottom: 4px; }
 .gradient-text { background: linear-gradient(135deg, var(--accent), #f59e0b); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
 .hero p { font-size: 14px; color: var(--text-muted); }
@@ -288,9 +358,15 @@ onMounted(() => {
 .btn-cancel {
   padding: 12px 20px; border: 1px solid var(--border-default); background: var(--bg-surface);
   border-radius: var(--radius-sm); color: var(--text-primary); font-size: 14px; font-weight: 600;
-  cursor: pointer; transition: all 0.2s ease;
+  cursor: pointer; transition: all 0.2s ease; flex: 1; display: flex; align-items: center; justify-content: center;
 }
 .btn-cancel:hover { background: var(--bg-base); }
+.btn-ghost {
+  background: var(--bg-elevated); color: var(--text-secondary); border: 1px solid var(--border-default);
+  padding: 9px 18px; border-radius: var(--radius-sm); font-size: 13px; cursor: pointer; font-family: inherit;
+  display: flex; align-items: center; gap: 6px; font-weight: 600;
+}
+.btn-ghost:hover { border-color: var(--border-strong); color: var(--text-primary); }
 
 .spinner { width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.6s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
@@ -342,4 +418,21 @@ onMounted(() => {
 .input-with-icon input { padding-left: 40px !important; border-style: solid !important; background: var(--bg-surface) !important; }
 
 .hint { font-size: 11px; color: var(--text-muted); margin-top: 4px; display: block; }
+
+/* Modal */
+.overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.65); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 100; }
+.modal {
+  background: var(--bg-surface); border: 1px solid var(--border-default);
+  border-radius: var(--radius-xl); padding: 28px; width: 100%; max-width: 460px;
+  box-shadow: var(--shadow-lg);
+}
+.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.modal h2 { font-size: 18px; color: var(--text-primary); font-weight: 700; }
+.modal-close { background: var(--bg-elevated); border: none; color: var(--text-muted); width: 32px; height: 32px; border-radius: 8px; cursor: pointer; font-size: 14px; }
+.modal-close:hover { color: var(--text-primary); background: var(--bg-hover); }
+
+.modal-enter-active, .modal-leave-active { transition: all 0.25s; }
+.modal-enter-from, .modal-leave-to { opacity: 0; }
+.modal-enter-from .modal, .modal-leave-to .modal { transform: scale(0.95) translateY(10px); }
+.modal-btns { display: flex; gap: 10px; margin-top: 24px; }
 </style>

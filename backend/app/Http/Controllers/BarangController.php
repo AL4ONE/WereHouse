@@ -23,6 +23,7 @@ class BarangController extends Controller
         $val = Validator::make($request->all(), [
             "kode_barang" => "required|unique:barangs,kode_barang",
             "name" => "required",
+            "placement" => "nullable|string",
             "stock_awal" => "required|numeric",
             "stock_saat_ini" => "required|numeric",
             "satuan" => "required",
@@ -38,7 +39,7 @@ class BarangController extends Controller
             ]);
         }
 
-        $barang = Barang::create($request->only(['kode_barang', 'name', 'stock_awal', 'stock_saat_ini', 'satuan', 'harga', 'min_stock']));
+        $barang = Barang::create($request->only(['kode_barang', 'name', 'placement', 'stock_awal', 'stock_saat_ini', 'satuan', 'harga', 'min_stock']));
 
         if ($request->has('supplier_ids')) {
             $barang->suppliers()->sync($request->supplier_ids);
@@ -76,6 +77,7 @@ class BarangController extends Controller
         $val = Validator::make($request->all(), [
             "kode_barang" => "required|unique:barangs,kode_barang,".$id,
             "name" => "required",
+            "placement" => "nullable|string",
             "stock_awal" => "required|numeric",
             "stock_saat_ini" => "required|numeric",
             "satuan" => "required",
@@ -90,7 +92,7 @@ class BarangController extends Controller
                 'error' => $val->errors(),
             ]);
         }
-        $barang->update($request->only(['kode_barang', 'name', 'stock_awal', 'stock_saat_ini', 'satuan', 'harga', 'min_stock']));
+        $barang->update($request->only(['kode_barang', 'name', 'placement', 'stock_awal', 'stock_saat_ini', 'satuan', 'harga', 'min_stock']));
 
         if ($request->has('supplier_ids')) {
             $barang->suppliers()->sync($request->supplier_ids);

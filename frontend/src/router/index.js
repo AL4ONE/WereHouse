@@ -22,6 +22,12 @@ const router = createRouter({
       meta: { requiresAuth: true, role: 'Manajer' }
     },
     {
+      path: '/manager/purchase-orders',
+      name: 'manager-purchase-orders',
+      component: () => import('@/views/PurchaseOrder.vue'),
+      meta: { requiresAuth: true, role: 'Manajer' }
+    },
+    {
       path: '/dashboard/admin',
       name: 'dashboard-admin',
       component: () => import('@/views/DashboardAdmin.vue'),
@@ -53,9 +59,21 @@ const router = createRouter({
       meta: { requiresAuth: true, role: 'Petugas' }
     },
     {
+      path: '/staff/purchase-orders',
+      name: 'staff-purchase-orders',
+      component: () => import('@/views/PurchaseOrder.vue'),
+      meta: { requiresAuth: true, role: 'Petugas' }
+    },
+    {
       path: '/admin/products',
       name: 'admin-products',
       component: () => import('@/views/BarangPage.vue'),
+      meta: { requiresAuth: true, role: 'Admin' }
+    },
+    {
+      path: '/admin/purchase-orders',
+      name: 'admin-purchase-orders',
+      component: () => import('@/views/PurchaseOrder.vue'),
       meta: { requiresAuth: true, role: 'Admin' }
     },
     {

@@ -7,32 +7,38 @@ import { adminNavLinks as navLinks } from '@/config/navLinks'
   <DashboardLayout :navLinks="navLinks">
     <div class="hero">
       <div class="hero-text">
-        <h1>Selamat Datang, <span class="gradient-text">Admin</span></h1>
+        <h1>Welcome, <span class="gradient-text">Admin</span></h1>
       </div>
     </div>
 
     <div class="cards">
       <router-link to="/admin/products" class="card">
-        <div class="card-glow c1"></div><span class="card-label">Produk</span>
-        <span class="card-desc">Kelola data barang</span>
+        <div class="card-glow c1"></div><span class="card-label">Products</span>
+        <span class="card-desc">Manage product data</span>
         <span class="card-arrow">→</span>
       </router-link>
       <router-link to="/admin/suppliers" class="card">
         <div class="card-glow c2"></div>
-        <span class="card-label">Supplier</span>
-        <span class="card-desc">Atur data supplier</span>
+        <span class="card-label">Suppliers</span>
+        <span class="card-desc">Manage supplier data</span>
+        <span class="card-arrow">→</span>
+      </router-link>
+      <router-link to="/admin/purchase-orders" class="card">
+        <div class="card-glow c1"></div>
+        <span class="card-label">Purchase Orders</span>
+        <span class="card-desc">Manage POs to suppliers</span>
         <span class="card-arrow">→</span>
       </router-link>
       <router-link to="/admin/inventory-in" class="card">
         <div class="card-glow c3"></div>
-        <span class="card-label">Barang Masuk</span>
-        <span class="card-desc">Catat stok masuk</span>
+        <span class="card-label">Inbound</span>
+        <span class="card-desc">Record incoming stock</span>
         <span class="card-arrow">→</span>
       </router-link>
       <router-link to="/admin/inventory-out" class="card">
         <div class="card-glow c4"></div>
-        <span class="card-label">Barang Keluar</span>
-        <span class="card-desc">Catat stok keluar</span>
+        <span class="card-label">Outbound</span>
+        <span class="card-desc">Record outgoing stock</span>
         <span class="card-arrow">→</span>
       </router-link>
     </div>
