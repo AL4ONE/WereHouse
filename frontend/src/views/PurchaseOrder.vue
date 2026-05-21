@@ -163,6 +163,180 @@ async function handleAction(action, poId) {
   }
 }
 
+function printPO(po) {
+  const tgl = new Date(po.order_date).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })
+  const expected = po.expected_date ? new Date(po.expected_date).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' }) : '-'
+  const fmt = (n) => Number(n).toLocaleString('id-ID')
+  
+  let itemsHtml = ''
+  po.items.forEach((item, index) => {
+    itemsHtml += `
+      <tr>
+        <td class="tc">${index + 1}</td>
+        <td style="font-weight:600">${item.barang?.kode_barang || '-'}</td>
+        <td>${item.barang?.name || '-'}</td>
+        <td class="tc">${item.quantity}</td>
+        <td class="tr">Rp ${fmt(item.unit_price)}</td>
+        <td class="tr" style="font-weight:600">Rp ${fmt(item.subtotal)}</td>
+      </tr>
+    `
+  })
+
+  const win = window.open('', '', 'width=900,height=800')
+  win.document.write(`
+    <html>
+      <head>
+        <title>Purchase Order - ${po.po_number}</title>
+        <style>
+          @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { font-family: 'Inter', sans-serif; padding: 40px 50px; color: #1e293b; line-height: 1.5; background: #fff; }
+          @page { margin: 0; size: A4 portrait; }
+          @media print { body { padding: 1.5cm 2cm; -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+
+          .po-header { display: flex; align-items: flex-start; justify-content: space-between; padding-bottom: 24px; border-bottom: 2px solid #f1f5f9; margin-bottom: 32px; }
+          .po-brand { display: flex; align-items: center; gap: 16px; }
+          .po-logo { width: 56px; height: 56px; background: linear-gradient(135deg, #8b5cf6, #6d28d9); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 800; font-size: 20px; box-shadow: 0 4px 12px rgba(139,92,246,0.25); }
+          .po-company h1 { font-size: 22px; font-weight: 800; color: #0f172a; letter-spacing: -0.5px; }
+          .po-company p { font-size: 12px; color: #64748b; margin-top: 2px; }
+          .po-title-block { text-align: right; }
+          .po-title-block h2 { font-size: 28px; font-weight: 800; color: #0f172a; letter-spacing: 1px; margin-bottom: 4px; }
+          .po-title-block .po-num { font-size: 13px; color: #64748b; font-weight: 600; background: #f8fafc; padding: 4px 12px; border-radius: 99px; display: inline-block; border: 1px solid #e2e8f0; }
+
+          .po-meta-row { display: flex; justify-content: space-between; margin-bottom: 32px; gap: 40px; }
+          .po-vendor { flex: 1; background: #f8fafc; border: 1px solid #f1f5f9; border-radius: 12px; padding: 24px; }
+          .po-vendor .label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: #94a3b8; margin-bottom: 8px; }
+          .po-vendor h3 { font-size: 16px; font-weight: 700; color: #0f172a; margin-bottom: 4px; }
+          .po-vendor p { font-size: 13px; color: #475569; margin-bottom: 2px; }
+
+          .po-details { width: 280px; background: #f8fafc; border: 1px solid #f1f5f9; border-radius: 12px; padding: 24px; }
+          .po-details table { width: 100%; }
+          .po-details td { font-size: 13px; padding: 6px 0; }
+          .po-details .dl { color: #64748b; font-weight: 500; width: 100px; }
+          .po-details .dv { color: #0f172a; font-weight: 700; text-align: right; }
+
+          .po-table { width: 100%; border-collapse: separate; border-spacing: 0; margin-bottom: 24px; border-radius: 12px; overflow: hidden; border: 1px solid #e2e8f0; }
+          .po-table thead th { background: #f8fafc; color: #475569; padding: 14px 16px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+          .po-table thead th:last-child { text-align: right; }
+          .po-table tbody td { padding: 16px; font-size: 13px; border-bottom: 1px solid #f1f5f9; color: #334155; }
+          .po-table tbody tr:last-child td { border-bottom: none; }
+          .po-table .tc { text-align: center; }
+          .po-table .tr { text-align: right; }
+
+          .po-bottom { display: flex; justify-content: space-between; gap: 40px; margin-top: 16px; align-items: flex-start; }
+          .po-notes { flex: 1; }
+          .po-notes .label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: #94a3b8; margin-bottom: 8px; }
+          .po-notes p { font-size: 12px; color: #64748b; line-height: 1.6; background: #f8fafc; padding: 16px; border-radius: 8px; border: 1px solid #f1f5f9; }
+
+          .po-summary { width: 340px; }
+          .po-summary table { width: 100%; border-collapse: collapse; }
+          .po-summary .total-final { background: linear-gradient(135deg, #0f172a, #1e293b); }
+          .po-summary .total-final td { padding: 14px 16px; }
+          .po-summary .total-final .sl { color: #cbd5e1; font-weight: 600; font-size: 14px; border-radius: 8px 0 0 8px; }
+          .po-summary .total-final .sv { color: #fff; font-weight: 800; font-size: 16px; border-radius: 0 8px 8px 0; text-align: right; }
+
+          .po-signature { display: flex; justify-content: space-between; margin-top: 50px; gap: 40px; padding: 0 20px;}
+          .sig-block { width: 200px; text-align: center; }
+          .sig-block .sig-title { font-size: 13px; font-weight: 600; color: #64748b; margin-bottom: 80px; }
+          .sig-block .sig-line { border-top: 1px solid #cbd5e1; padding-top: 8px; }
+          .sig-block .sig-name { font-size: 14px; font-weight: 700; color: #0f172a; }
+          .sig-block .sig-role { font-size: 11px; color: #94a3b8; margin-top: 2px; }
+
+          .po-footer { margin-top: 50px; padding-top: 20px; border-top: 1px solid #f1f5f9; text-align: center; }
+          .po-footer p { font-size: 12px; color: #94a3b8; font-weight: 500; letter-spacing: 0.5px; }
+        </style>
+      </head>
+      <body>
+        <div class="po-header">
+          <div class="po-brand">
+            <div class="po-logo">MM</div>
+            <div class="po-company">
+              <h1>PT MAJU MAKMUR</h1>
+              <p>Jln. Mawar No. 10, Madiun, Jawa Timur 130001</p>
+            </div>
+          </div>
+          <div class="po-title-block">
+            <h2>PURCHASE ORDER</h2>
+            <div class="po-num">#${po.po_number}</div>
+          </div>
+        </div>
+
+        <div class="po-meta-row">
+          <div class="po-vendor">
+            <div class="label">Vendor / Supplier</div>
+            <h3>${po.supplier?.name || '-'}</h3>
+            <p>${po.supplier?.alamat || '-'}</p>
+            <p>Telp: ${po.supplier?.phone || '-'}</p>
+            <p>Email: ${po.supplier?.email || '-'}</p>
+          </div>
+          <div class="po-details">
+            <div class="label">PO Details</div>
+            <table>
+              <tr><td class="dl">Date</td><td class="dv">${tgl}</td></tr>
+              <tr><td class="dl">Expected</td><td class="dv">${expected}</td></tr>
+              <tr><td class="dl">Status</td><td class="dv" style="text-transform: capitalize;">${po.status}</td></tr>
+            </table>
+          </div>
+        </div>
+
+        <table class="po-table">
+          <thead>
+            <tr>
+              <th style="width:50px">No.</th>
+              <th style="width:120px">Item Code</th>
+              <th>Description</th>
+              <th style="width:80px;text-align:center">Qty</th>
+              <th style="width:130px;text-align:right">Unit Price</th>
+              <th style="width:140px;text-align:right">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${itemsHtml}
+          </tbody>
+        </table>
+
+        <div class="po-bottom">
+          <div class="po-notes">
+            <div class="label">Notes & Terms</div>
+            <p>${po.notes || '1. Please send two copies of your invoice.<br>2. Enter this order in accordance with the prices, terms, delivery method, and specifications listed above.'}</p>
+          </div>
+          <div class="po-summary">
+            <table>
+              <tr class="total-final">
+                <td class="sl">Grand Total</td>
+                <td class="sv">Rp ${fmt(po.total_amount)}</td>
+              </tr>
+            </table>
+          </div>
+        </div>
+
+        <div class="po-signature">
+          <div class="sig-block">
+            <div class="sig-title">Prepared By</div>
+            <div class="sig-line">
+              <div class="sig-name">${po.creator?.name || '(...........................)'}</div>
+              <div class="sig-role">Purchasing Staff</div>
+            </div>
+          </div>
+          <div class="sig-block">
+            <div class="sig-title">Authorized By</div>
+            <div class="sig-line">
+              <div class="sig-name">(...........................)</div>
+              <div class="sig-role">General Manager</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="po-footer">
+          <p>Please deliver the items to our warehouse address by the expected delivery date.</p>
+        </div>
+      </body>
+    </html>
+  `)
+  win.document.close()
+  setTimeout(() => { win.print(); win.close(); }, 500)
+}
+
 onMounted(() => {
   fetchData()
 })
@@ -366,9 +540,13 @@ onMounted(() => {
         </table>
       </div>
 
-      <div class="detail-actions mt-4">
+        <div class="detail-actions mt-4">
         <button class="btn-cancel" @click="viewMode = 'list'">Back</button>
         
+        <button class="btn-submit purple" @click="printPO(selectedPO)">
+          🖨️ Print PO
+        </button>
+
         <!-- Workflow Actions -->
         <template v-if="selectedPO.status === 'pending' && (isAdmin || isManajer)">
           <button class="btn-submit orange" @click="handleAction('approve', selectedPO.id)">✅ Approve PO</button>
@@ -435,6 +613,7 @@ onMounted(() => {
 .btn-submit.gray { background: #6b7280; }
 .btn-submit.green { background: #10b981; }
 .btn-submit.red { background: #ef4444; }
+.btn-submit.purple { background: linear-gradient(135deg, #8b5cf6, #6d28d9); box-shadow: 0 4px 12px rgba(139,92,246,0.3); }
 
 /* Badges */
 .badge { padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; }
