@@ -67,6 +67,7 @@ async function handleSubmit() {
     }
     showModal.value = false
     fetchBarangs()
+  } catch (e) {
     msg.value = { text: 'Failed to save!', type: 'err' }
     console.log(e)
   }
