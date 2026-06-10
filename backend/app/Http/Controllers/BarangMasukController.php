@@ -10,7 +10,8 @@ use Illuminate\Support\Facades\Validator;
 class BarangMasukController extends Controller
 {
     public function index(Request $request){
-        $query = BarangMasuk::with(['barang', 'supplier']);
+        $isTraining = $request->user()->isTraining();
+        $query = BarangMasuk::with(['barang', 'supplier'])->trainingMode($isTraining);
 
         if($request->start_date && $request->end_date) {
             $query->whereBetween('created_at', [$request->start_date . ' 00:00:00', $request->end_date . ' 23:59:59']);
@@ -35,11 +36,13 @@ class BarangMasukController extends Controller
             ]);
         }
 
-        $barang = Barang::where("id", $request->barang_id)->first();
+        $isTraining = $request->user()->isTraining();
+        $barang = Barang::where("id", $request->barang_id)->where('is_training', $isTraining)->first();
         
         $data = $request->only(['barang_id', 'supplier_id', 'stock']);
         $data['harga_satuan'] = $barang->harga;
         $data['total_harga'] = $barang->harga * $request->stock;
+        $data['is_training'] = $isTraining;
         
         $barangMasuk = BarangMasuk::create($data);
         $barang->update([
@@ -65,7 +68,8 @@ class BarangMasukController extends Controller
             ]);
         }
 
-        $barangMasuk = BarangMasuk::findOrFail($id);
+        $isTraining = $request->user()->isTraining();
+        $barangMasuk = BarangMasuk::where('id', $id)->where('is_training', $isTraining)->firstOrFail();
         
         $oldBarang = Barang::findOrFail($barangMasuk->barang_id);
         $oldBarang->update([
@@ -89,8 +93,9 @@ class BarangMasukController extends Controller
         ]);
     }
 
-    public function destroy($id){
-        $barangMasuk = BarangMasuk::findOrFail($id);
+    public function destroy(Request $request, $id){
+        $isTraining = $request->user()->isTraining();
+        $barangMasuk = BarangMasuk::where('id', $id)->where('is_training', $isTraining)->firstOrFail();
         
         $barang = Barang::findOrFail($barangMasuk->barang_id);
         $barang->update([

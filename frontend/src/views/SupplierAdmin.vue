@@ -2,7 +2,11 @@
 import { ref, computed, onMounted } from 'vue'
 import api from '@/api'
 import DashboardLayout from '@/layouts/DashboardLayout.vue'
-import { adminNavLinks as navLinks } from '@/config/navLinks'
+import { useAuthStore } from '@/stores/auth'
+import { adminNavLinks, trainingAdminNavLinks } from '@/config/navLinks'
+
+const authStore = useAuthStore()
+const navLinks = authStore.isTraining ? trainingAdminNavLinks : adminNavLinks
 
 const barangs = ref([])
 const suppliers = ref([])

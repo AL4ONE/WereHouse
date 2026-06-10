@@ -7,7 +7,17 @@ use Illuminate\Database\Eloquent\Model;
 
 class Barang extends Model
 {
-    protected $fillable = ['kode_barang', 'name', 'placement', 'stock_awal', 'stock_saat_ini', 'satuan', 'harga', 'min_stock'];
+    protected $fillable = ['kode_barang', 'name', 'placement', 'stock_awal', 'stock_saat_ini', 'satuan', 'harga', 'min_stock', 'is_training'];
+    
+    protected $casts = [
+        'is_training' => 'boolean',
+    ];
+
+    public function scopeTrainingMode($query, $isTraining)
+    {
+        return $query->where('is_training', $isTraining);
+    }
+
     public function barangMasuks()
     {
         return $this->hasMany(BarangMasuk::class);

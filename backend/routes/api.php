@@ -4,6 +4,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BarangController;
 use App\Http\Controllers\BarangKeluarController;
 use App\Http\Controllers\BarangMasukController;
+use App\Http\Controllers\CompanyProfileController;
 use App\Http\Controllers\PurchaseOrderController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Middleware\AdminMiddleware;
@@ -20,6 +21,9 @@ Route::middleware(AuthMiddleware::class)->group(function () {
 
     Route::get("products", [BarangController::class, "index"]);
 
+    // Company Profile
+    Route::get("/company-profile", [CompanyProfileController::class, "show"]);
+    Route::post("/company-profile", [CompanyProfileController::class, "update"]);
 
     Route::middleware(AdminMiddleware::class)->group(function () {
 

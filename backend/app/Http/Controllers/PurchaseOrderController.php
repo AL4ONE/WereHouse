@@ -17,7 +17,9 @@ class PurchaseOrderController extends Controller
      */
     public function index(Request $request)
     {
-        $query = PurchaseOrder::with(['supplier', 'creator', 'approver', 'items.barang']);
+        $isTraining = $request->user()->isTraining();
+        $query = PurchaseOrder::with(['supplier', 'creator', 'approver', 'items.barang'])
+            ->trainingMode($isTraining);
 
         if ($request->status) {
             $query->where('status', $request->status);
@@ -40,9 +42,12 @@ class PurchaseOrderController extends Controller
     /**
      * Show a single purchase order with items
      */
-    public function show($id)
+    public function show(Request $request, $id)
     {
-        $po = PurchaseOrder::with(['supplier', 'creator', 'approver', 'items.barang'])->findOrFail($id);
+        $isTraining = $request->user()->isTraining();
+        $po = PurchaseOrder::with(['supplier', 'creator', 'approver', 'items.barang'])
+            ->where('is_training', $isTraining)
+            ->findOrFail($id);
 
         return response()->json([
             'status' => 'success',
@@ -73,11 +78,14 @@ class PurchaseOrderController extends Controller
             ], 422);
         }
 
-        return DB::transaction(function () use ($request) {
+        $isTraining = $request->user()->isTraining();
+
+        return DB::transaction(function () use ($request, $isTraining) {
             // Generate PO Number: PO-YYYY-XXX
             $year = date('Y');
-            $count = PurchaseOrder::whereYear('created_at', $year)->count();
-            $poNumber = 'PO-' . $year . '-' . str_pad($count + 1, 3, '0', STR_PAD_LEFT);
+            $count = PurchaseOrder::whereYear('created_at', $year)->where('is_training', $isTraining)->count();
+            $prefix = $isTraining ? 'TRN-PO-' : 'PO-';
+            $poNumber = $prefix . $year . '-' . str_pad($count + 1, 3, '0', STR_PAD_LEFT);
 
             $po = PurchaseOrder::create([
                 'po_number' => $poNumber,
@@ -88,6 +96,7 @@ class PurchaseOrderController extends Controller
                 'expected_date' => $request->expected_date,
                 'notes' => $request->notes,
                 'total_amount' => 0,
+                'is_training' => $isTraining,
             ]);
 
             $totalAmount = 0;
@@ -123,7 +132,8 @@ class PurchaseOrderController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $po = PurchaseOrder::findOrFail($id);
+        $isTraining = $request->user()->isTraining();
+        $po = PurchaseOrder::where('is_training', $isTraining)->findOrFail($id);
 
         if ($po->status !== 'draft') {
             return response()->json([
@@ -193,9 +203,10 @@ class PurchaseOrderController extends Controller
     /**
      * Delete a purchase order (only draft status)
      */
-    public function destroy($id)
+    public function destroy(Request $request, $id)
     {
-        $po = PurchaseOrder::findOrFail($id);
+        $isTraining = $request->user()->isTraining();
+        $po = PurchaseOrder::where('is_training', $isTraining)->findOrFail($id);
 
         if ($po->status !== 'draft') {
             return response()->json([
@@ -216,7 +227,8 @@ class PurchaseOrderController extends Controller
      */
     public function approve(Request $request, $id)
     {
-        $po = PurchaseOrder::findOrFail($id);
+        $isTraining = $request->user()->isTraining();
+        $po = PurchaseOrder::where('is_training', $isTraining)->findOrFail($id);
 
         if ($po->status !== 'pending') {
             return response()->json([
@@ -242,7 +254,8 @@ class PurchaseOrderController extends Controller
      */
     public function receive(Request $request, $id)
     {
-        $po = PurchaseOrder::with('items')->findOrFail($id);
+        $isTraining = $request->user()->isTraining();
+        $po = PurchaseOrder::with('items')->where('is_training', $isTraining)->findOrFail($id);
 
         if ($po->status !== 'approved') {
             return response()->json([
@@ -251,7 +264,7 @@ class PurchaseOrderController extends Controller
             ], 400);
         }
 
-        return DB::transaction(function () use ($po) {
+        return DB::transaction(function () use ($po, $isTraining) {
             foreach ($po->items as $item) {
                 // Create BarangMasuk record
                 BarangMasuk::create([
@@ -260,6 +273,7 @@ class PurchaseOrderController extends Controller
                     'stock' => $item->quantity,
                     'harga_satuan' => $item->unit_price,
                     'total_harga' => $item->subtotal,
+                    'is_training' => $isTraining,
                 ]);
 
                 // Update stock
@@ -289,7 +303,8 @@ class PurchaseOrderController extends Controller
      */
     public function cancel(Request $request, $id)
     {
-        $po = PurchaseOrder::findOrFail($id);
+        $isTraining = $request->user()->isTraining();
+        $po = PurchaseOrder::where('is_training', $isTraining)->findOrFail($id);
 
         if (in_array($po->status, ['received', 'cancelled'])) {
             return response()->json([

@@ -10,7 +10,8 @@ use Illuminate\Support\Facades\Validator;
 class BarangKeluarController extends Controller
 {
     public function index(Request $request){
-        $query = BarangKeluar::with('barang');
+        $isTraining = $request->user()->isTraining();
+        $query = BarangKeluar::with('barang')->trainingMode($isTraining);
 
         if($request->start_date && $request->end_date) {
             $query->whereBetween('created_at', [$request->start_date . ' 00:00:00', $request->end_date . ' 23:59:59']);
@@ -44,7 +45,8 @@ class BarangKeluarController extends Controller
             ], 422);
         }
 
-        $barang = Barang::where("id", $request->barang_id)->first();
+        $isTraining = $request->user()->isTraining();
+        $barang = Barang::where("id", $request->barang_id)->where('is_training', $isTraining)->first();
 
         if($request->stock > $barang->stock_saat_ini){
             return response()->json([
@@ -57,14 +59,17 @@ class BarangKeluarController extends Controller
 
         $data['harga_satuan'] = $barang->harga;
         $data['total_harga'] = $barang->harga * $request->stock;
+        $data['is_training'] = $isTraining;
 
         // Generate Invoice Number: INV-YYYYMMDD-XXXX
-        $count = BarangKeluar::whereDate('created_at', now())->count();
-        $data['invoice_number'] = 'INV-' . date('Ymd') . '-' . str_pad($count + 1, 4, '0', STR_PAD_LEFT);
+        $count = BarangKeluar::whereDate('created_at', now())->where('is_training', $isTraining)->count();
+        $prefix = $isTraining ? 'TRN-INV-' : 'INV-';
+        $data['invoice_number'] = $prefix . date('Ymd') . '-' . str_pad($count + 1, 4, '0', STR_PAD_LEFT);
 
         // Generate PO Number: PO-YYYY-XXX
-        $poCount = BarangKeluar::whereYear('created_at', date('Y'))->count();
-        $data['po_number'] = 'PO-' . date('Y') . '-' . str_pad($poCount + 1, 3, '0', STR_PAD_LEFT);
+        $poCount = BarangKeluar::whereYear('created_at', date('Y'))->where('is_training', $isTraining)->count();
+        $poPrefix = $isTraining ? 'TRN-PO-' : 'PO-';
+        $data['po_number'] = $poPrefix . date('Y') . '-' . str_pad($poCount + 1, 3, '0', STR_PAD_LEFT);
         
         $barangKeluar = BarangKeluar::create($data);
         $barang->update([

@@ -8,8 +8,9 @@ use Illuminate\Support\Facades\Validator;
 
 class SupplierController extends Controller
 {
-    public function index(){
-        $suppliers = Supplier::with('barangs')->get();
+    public function index(Request $request){
+        $isTraining = $request->user()->isTraining();
+        $suppliers = Supplier::with('barangs')->trainingMode($isTraining)->get();
         return response()->json([
             'status' => "success",
             "data" => $suppliers
@@ -32,7 +33,10 @@ class SupplierController extends Controller
             ]);
         }
 
-        $supplier = Supplier::create($request->only(['name', 'email', 'phone', 'alamat']));
+        $data = $request->only(['name', 'email', 'phone', 'alamat']);
+        $data['is_training'] = $request->user()->isTraining();
+
+        $supplier = Supplier::create($data);
 
         if ($request->has('barang_ids')) {
             $supplier->barangs()->sync($request->barang_ids);
@@ -43,8 +47,9 @@ class SupplierController extends Controller
         ]);
     }
 
-    public function destroy($id){
-        $supplier = Supplier::where("id", $id)->first();
+    public function destroy(Request $request, $id){
+        $isTraining = $request->user()->isTraining();
+        $supplier = Supplier::where("id", $id)->where('is_training', $isTraining)->first();
         if(!$supplier){
             return response()->json([
                 'error' => "supplier not found"
@@ -58,7 +63,8 @@ class SupplierController extends Controller
     }
 
     public function update(Request $request, $id){
-            $supplier = Supplier::where("id", $id)->first();
+            $isTraining = $request->user()->isTraining();
+            $supplier = Supplier::where("id", $id)->where('is_training', $isTraining)->first();
             if(!$supplier){
                 return response()->json([
                     'error' => "supplier not found"

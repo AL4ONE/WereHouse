@@ -41,4 +41,21 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+
+    /**
+     * Check if user is in training mode
+     */
+    public function isTraining(): bool
+    {
+        return str_contains($this->role, 'Latihan');
+    }
+
+    /**
+     * Get the base role without "Latihan" suffix
+     * e.g. "Admin Latihan" => "Admin"
+     */
+    public function baseRole(): string
+    {
+        return trim(str_replace('Latihan', '', $this->role));
+    }
 }

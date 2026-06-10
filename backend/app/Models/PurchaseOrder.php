@@ -16,13 +16,20 @@ class PurchaseOrder extends Model
         'expected_date',
         'notes',
         'total_amount',
+        'is_training',
     ];
 
     protected $casts = [
         'order_date' => 'date',
         'expected_date' => 'date',
         'total_amount' => 'decimal:2',
+        'is_training' => 'boolean',
     ];
+
+    public function scopeTrainingMode($query, $isTraining)
+    {
+        return $query->where('is_training', $isTraining);
+    }
 
     public function supplier()
     {

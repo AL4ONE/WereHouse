@@ -6,11 +6,13 @@ import autoTable from 'jspdf-autotable'
 import api from '@/api'
 import DashboardLayout from '@/layouts/DashboardLayout.vue'
 import { useAuthStore } from '@/stores/auth'
-import { adminNavLinks, petugasNavLinks } from '@/config/navLinks'
+import { adminNavLinks, petugasNavLinks, trainingAdminNavLinks, trainingPetugasNavLinks } from '@/config/navLinks'
 
 const authStore = useAuthStore()
-const isAdmin = authStore.userRole === 'Admin'
-const navLinks = isAdmin ? adminNavLinks : petugasNavLinks
+const isAdmin = authStore.baseRole === 'Admin' || authStore.userRole === 'Admin'
+const navLinks = authStore.isTraining
+  ? (authStore.baseRole === 'Admin' ? trainingAdminNavLinks : trainingPetugasNavLinks)
+  : (authStore.userRole === 'Admin' ? adminNavLinks : petugasNavLinks)
 
 const barangs = ref([])
 const allSuppliers = ref([])

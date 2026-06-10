@@ -3,10 +3,17 @@ import { ref, computed, onMounted, watch } from 'vue'
 import api from '@/api'
 import DashboardLayout from '@/layouts/DashboardLayout.vue'
 import { useAuthStore } from '@/stores/auth'
-import { adminNavLinks, petugasNavLinks } from '@/config/navLinks'
+import { adminNavLinks, petugasNavLinks, trainingAdminNavLinks, trainingPetugasNavLinks } from '@/config/navLinks'
 
 const authStore = useAuthStore()
-const navLinks = authStore.userRole === 'Admin' ? adminNavLinks : petugasNavLinks
+const isTraining = authStore.isTraining
+const baseRole = authStore.baseRole
+
+const navLinks = isTraining
+  ? (baseRole === 'Admin' ? trainingAdminNavLinks : trainingPetugasNavLinks)
+  : (authStore.userRole === 'Admin' ? adminNavLinks : petugasNavLinks)
+
+const companyProfile = ref(null)
 
 const barangs = ref([])
 const inventoryOuts = ref([])
@@ -61,6 +68,14 @@ const discountFormatted = makeCurrencyComputed('discount')
 const shippingFormatted = makeCurrencyComputed('shipping_cost')
 const dpFormatted = makeCurrencyComputed('down_payment')
 
+async function fetchCompanyProfile() {
+  if (!isTraining) return
+  try {
+    const res = await api.get('/company-profile')
+    companyProfile.value = res.data.data
+  } catch (e) { console.log(e) }
+}
+
 async function fetchBarangs() {
   try { 
     const res = await api.get('/products'); 
@@ -102,6 +117,11 @@ function printInvoice(item) {
   const finalTotal = (Number(item.total_harga) - Number(item.discount)) - Number(item.down_payment) + Number(item.shipping_cost)
   const tgl = new Date(item.created_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })
   const fmt = (n) => Number(n).toLocaleString('id-ID')
+
+  const cp = companyProfile.value
+  const cName = isTraining && cp ? cp.company_name : 'PT MAJU MAKMUR'
+  const cAddr = isTraining && cp ? cp.company_address : 'Jln. Mawar No. 10, Madiun, Jawa Timur 130001'
+  const cInitials = isTraining && cp ? cp.company_logo_initials : 'MM'
 
   const win = window.open('', '', 'width=900,height=800')
   win.document.write(`<html><head><title>Invoice - ${item.invoice_number}</title>
@@ -178,10 +198,10 @@ function printInvoice(item) {
 </style></head><body>
   <div class="inv-header">
     <div class="inv-brand">
-      <div class="inv-logo">MM</div>
+      <div class="inv-logo">${cInitials}</div>
       <div class="inv-company">
-        <h1>PT MAJU MAKMUR</h1>
-        <p>Jln. Mawar No. 10, Madiun, Jawa Timur 130001</p>
+        <h1>${cName}</h1>
+        <p>${cAddr}</p>
       </div>
     </div>
     <div class="inv-title-block">
@@ -254,6 +274,11 @@ function printInvoice(item) {
 }
 
 function printSuratJalan(item) {
+  const cp = companyProfile.value
+  const cName = isTraining && cp ? cp.company_name : 'PT MAJU MAKMUR'
+  const cAddr = isTraining && cp ? cp.company_address : 'Jln. Mawar No. 10, Madiun, Jawa Timur 130001'
+  const cInitials = isTraining && cp ? cp.company_logo_initials : 'MM'
+
   const win = window.open('', '', 'width=900,height=800')
   win.document.write(`
     <html>
@@ -311,10 +336,10 @@ function printSuratJalan(item) {
       <body>
         <div class="sj-header">
           <div class="sj-brand">
-            <div class="sj-logo">MM</div>
+            <div class="sj-logo">${cInitials}</div>
             <div class="sj-company">
-              <h1>PT MAJU MAKMUR</h1>
-              <p>Jln. Mawar No. 10, Madiun, Jawa Timur 130001</p>
+              <h1>${cName}</h1>
+              <p>${cAddr}</p>
             </div>
           </div>
           <div class="sj-title-block">
@@ -392,6 +417,7 @@ function printSuratJalan(item) {
 onMounted(() => { 
   fetchBarangs() 
   fetchInventoryOut()
+  fetchCompanyProfile()
 })
 </script>
 
@@ -515,7 +541,7 @@ onMounted(() => {
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7"></path><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
                         Invoice
                     </button>
-                    <button v-if="authStore.userRole === 'Admin'" class="btn-invoice blue" @click="printSuratJalan(item)">
+                    <button v-if="baseRole === 'Admin'" class="btn-invoice blue" @click="printSuratJalan(item)">
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg>
                         Delivery Note
                     </button>

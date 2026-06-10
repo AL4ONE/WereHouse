@@ -15,6 +15,7 @@ const router = createRouter({
       redirect: '/login'
     },
 
+    // === Production Routes ===
     {
       path: '/dashboard/manager',
       name: 'dashboard-manager',
@@ -94,6 +95,104 @@ const router = createRouter({
       component: () => import('@/views/BarangKeluar.vue'),
       meta: { requiresAuth: true, role: 'Admin' }
     },
+
+    // === Training Mode Routes ===
+    {
+      path: '/training/login',
+      name: 'training-login',
+      component: () => import('@/views/LoginTraining.vue'),
+      meta: { guest: true }
+    },
+    // Training Dashboards
+    {
+      path: '/training/dashboard/admin',
+      name: 'training-dashboard-admin',
+      component: () => import('@/views/DashboardAdminTraining.vue'),
+      meta: { requiresAuth: true, role: 'Admin Latihan' }
+    },
+    {
+      path: '/training/dashboard/staff',
+      name: 'training-dashboard-staff',
+      component: () => import('@/views/DashboardPetugasTraining.vue'),
+      meta: { requiresAuth: true, role: 'Petugas Latihan' }
+    },
+    {
+      path: '/training/dashboard/manager',
+      name: 'training-dashboard-manager',
+      component: () => import('@/views/DashboardManajerTraining.vue'),
+      meta: { requiresAuth: true, role: 'Manajer Latihan' }
+    },
+    // Training Admin Pages
+    {
+      path: '/training/admin/products',
+      name: 'training-admin-products',
+      component: () => import('@/views/BarangPage.vue'),
+      meta: { requiresAuth: true, role: 'Admin Latihan' }
+    },
+    {
+      path: '/training/admin/suppliers',
+      name: 'training-admin-suppliers',
+      component: () => import('@/views/SupplierAdmin.vue'),
+      meta: { requiresAuth: true, role: 'Admin Latihan' }
+    },
+    {
+      path: '/training/admin/purchase-orders',
+      name: 'training-admin-purchase-orders',
+      component: () => import('@/views/PurchaseOrder.vue'),
+      meta: { requiresAuth: true, role: 'Admin Latihan' }
+    },
+    {
+      path: '/training/admin/inventory-in',
+      name: 'training-admin-inventory-in',
+      component: () => import('@/views/BarangMasuk.vue'),
+      meta: { requiresAuth: true, role: 'Admin Latihan' }
+    },
+    {
+      path: '/training/admin/inventory-out',
+      name: 'training-admin-inventory-out',
+      component: () => import('@/views/BarangKeluar.vue'),
+      meta: { requiresAuth: true, role: 'Admin Latihan' }
+    },
+    // Training Staff Pages
+    {
+      path: '/training/staff/products',
+      name: 'training-staff-products',
+      component: () => import('@/views/BarangPage.vue'),
+      meta: { requiresAuth: true, role: 'Petugas Latihan' }
+    },
+    {
+      path: '/training/staff/purchase-orders',
+      name: 'training-staff-purchase-orders',
+      component: () => import('@/views/PurchaseOrder.vue'),
+      meta: { requiresAuth: true, role: 'Petugas Latihan' }
+    },
+    {
+      path: '/training/staff/inventory-in',
+      name: 'training-staff-inventory-in',
+      component: () => import('@/views/BarangMasuk.vue'),
+      meta: { requiresAuth: true, role: 'Petugas Latihan' }
+    },
+    {
+      path: '/training/staff/inventory-out',
+      name: 'training-staff-inventory-out',
+      component: () => import('@/views/BarangKeluar.vue'),
+      meta: { requiresAuth: true, role: 'Petugas Latihan' }
+    },
+    // Training Manager Pages
+    {
+      path: '/training/manager/purchase-orders',
+      name: 'training-manager-purchase-orders',
+      component: () => import('@/views/PurchaseOrder.vue'),
+      meta: { requiresAuth: true, role: 'Manajer Latihan' }
+    },
+    {
+      path: '/training/manager/company-profile',
+      name: 'training-manager-company-profile',
+      component: () => import('@/views/CompanyProfile.vue'),
+      meta: { requiresAuth: true, role: 'Manajer Latihan' }
+    },
+
+    // === Legacy Learning Routes ===
     {
       path: '/learning/login',
       name: 'learning-login',
@@ -121,15 +220,29 @@ router.beforeEach((to, from, next) => {
   const authStore = useAuthStore()
 
   if (to.meta.requiresAuth && !authStore.isLoggedIn) {
-    next('/login')
+    // If trying to access training route, redirect to training login
+    if (to.path.startsWith('/training/')) {
+      next('/training/login')
+    } else {
+      next('/login')
+    }
   } else if (to.meta.guest && authStore.isLoggedIn) {
     const role = authStore.userRole
     if (!role) {
       authStore.logout()
       next('/login')
     } else {
-      const roleMap = { 'Manajer': 'manager', 'Admin': 'admin', 'Petugas': 'staff' };
-      next(`/dashboard/${roleMap[role] || role.toLowerCase()}`)
+      // Training roles redirect to training dashboard
+      const isTraining = role.includes('Latihan')
+      const baseRole = role.replace(' Latihan', '').trim()
+      const roleMap = { 'Manajer': 'manager', 'Admin': 'admin', 'Petugas': 'staff' }
+      const rolePath = roleMap[baseRole] || baseRole.toLowerCase()
+      
+      if (isTraining) {
+        next(`/training/dashboard/${rolePath}`)
+      } else {
+        next(`/dashboard/${rolePath}`)
+      }
     }
   } else {
     next()

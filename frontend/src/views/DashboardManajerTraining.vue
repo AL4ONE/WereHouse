@@ -4,17 +4,14 @@ import api from '@/api'
 import DashboardLayout from '@/layouts/DashboardLayout.vue'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import { manajerNavLinks, trainingManajerNavLinks } from '@/config/navLinks'
-import { useAuthStore } from '@/stores/auth'
-
-const authStore = useAuthStore()
-const navLinks = authStore.isTraining ? trainingManajerNavLinks : manajerNavLinks
+import { trainingManajerNavLinks as navLinks } from '@/config/navLinks'
 
 const barangs = ref([])
 const isLoading = ref(false)
 const startDate = ref('')
 const endDate = ref('')
 const reportType = ref('semua')
+const companyProfile = ref(null)
 
 async function fetchBarangs() {
   isLoading.value = true
@@ -28,6 +25,17 @@ async function fetchBarangs() {
     isLoading.value = false 
   }
 }
+
+async function fetchCompanyProfile() {
+  try {
+    const res = await api.get('/company-profile')
+    companyProfile.value = res.data.data
+  } catch (e) {
+    console.error(e)
+  }
+}
+
+const companyName = computed(() => companyProfile.value?.company_name || 'PT LATIHAN JAYA')
 
 const hasFilter = computed(() => !!(startDate.value || endDate.value || reportType.value !== 'semua'))
 
@@ -103,7 +111,8 @@ function resetFilter() {
 function cetakPDF() {
   const doc = new jsPDF({ orientation: 'landscape' })
   
-  doc.text('Warehouse Inventory Report', 14, 15)
+  const name = companyName.value
+  doc.text(`${name} — Warehouse Inventory Report (TRAINING)`, 14, 15)
   doc.setFontSize(10)
   doc.text(`Filter: ${reportType.value.toUpperCase()}`, 14, 22)
   if (startDate.value || endDate.value) {
@@ -133,10 +142,13 @@ function cetakPDF() {
   }
 
   autoTable(doc, { startY, head: tableHead, body: tableBody })
-  doc.save(`Report_${reportType.value}.pdf`)
+  doc.save(`Training_Report_${reportType.value}.pdf`)
 }
 
-onMounted(() => { fetchBarangs() })
+onMounted(() => { 
+  fetchBarangs()
+  fetchCompanyProfile()
+})
 </script>
 
 <template>
@@ -146,10 +158,16 @@ onMounted(() => { fetchBarangs() })
     </div>
 
     <div class="cards">
-      <router-link to="/manager/purchase-orders" class="card">
+      <router-link to="/training/manager/purchase-orders" class="card">
         <div class="card-glow green"></div>
         <span class="card-label">PO Approval</span>
         <span class="card-desc">Review & Approve Purchase Orders</span>
+        <span class="card-arrow">→</span>
+      </router-link>
+      <router-link to="/training/manager/company-profile" class="card">
+        <div class="card-glow blue"></div>
+        <span class="card-label">Company Profile</span>
+        <span class="card-desc">Edit company info for reports</span>
         <span class="card-arrow">→</span>
       </router-link>
     </div>
@@ -201,33 +219,13 @@ onMounted(() => { fetchBarangs() })
       <table>
         <thead>
           <tr v-if="reportType === 'semua' || reportType === 'menipis'">
-            <th>No</th>
-            <th>Date</th>
-            <th>Product Name</th>
-            <th>Unit</th>
-            <th>Init Stock</th>
-            <th>Total Inbound</th>
-            <th>Total Outbound</th>
-            <th>Adjustment</th>
-            <th>Remaining Stock</th>
+            <th>No</th><th>Date</th><th>Product Name</th><th>Unit</th><th>Init Stock</th><th>Total Inbound</th><th>Total Outbound</th><th>Adjustment</th><th>Remaining Stock</th>
           </tr>
           <tr v-else-if="reportType === 'masuk'">
-            <th>No</th>
-            <th>Date</th>
-            <th>Product Name</th>
-            <th>Unit</th>
-            <th>Total Inbound (+)</th>
-            <th>Adjustment</th>
-            <th>Remaining Stock</th>
+            <th>No</th><th>Date</th><th>Product Name</th><th>Unit</th><th>Total Inbound (+)</th><th>Adjustment</th><th>Remaining Stock</th>
           </tr>
           <tr v-else-if="reportType === 'keluar'">
-            <th>No</th>
-            <th>Date</th>
-            <th>Product Name</th>
-            <th>Unit</th>
-            <th>Total Outbound (-)</th>
-            <th>Adjustment</th>
-            <th>Remaining Stock</th>
+            <th>No</th><th>Date</th><th>Product Name</th><th>Unit</th><th>Total Outbound (-)</th><th>Adjustment</th><th>Remaining Stock</th>
           </tr>
         </thead>
         <tbody>
@@ -252,7 +250,6 @@ onMounted(() => { fetchBarangs() })
               <td class="num-cell sisa" :class="p.stock_saat_ini <= 5 ? 'err' : 'ok-bold'">{{ p.stock_saat_ini }}</td>
             </tr>
           </template>
-
           <template v-if="reportType === 'masuk'">
             <tr v-for="(p, i) in reportData" :key="'masuk-'+p.id">
               <td class="num-cell">{{ i + 1 }}</td>
@@ -291,7 +288,6 @@ onMounted(() => { fetchBarangs() })
               <td class="num-cell sisa" :class="p.stock_saat_ini <= 5 ? 'err' : 'ok-bold'">{{ p.stock_saat_ini }}</td>
             </tr>
           </template>
-
           <tr v-if="!reportData.length">
             <td :colspan="reportType === 'semua' || reportType === 'menipis' ? 9 : 8" class="empty-cell">
               {{ hasFilter ? 'No report data in this date range.' : 'No data available.' }}
@@ -306,111 +302,43 @@ onMounted(() => { fetchBarangs() })
 <style scoped>
 .hero { margin-bottom: 28px; }
 .hero h1 { font-size: 28px; font-weight: 800; color: var(--text-primary); letter-spacing: -0.5px; margin-bottom: 6px; }
-.gradient-text {
-  background: linear-gradient(135deg, var(--accent), #f59e0b);
-  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-}
-.hero p { font-size: 15px; color: var(--text-muted); }
-
-.glass-card {
-  background: var(--bg-surface);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-}
-
-/* Cards */
-.cards {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px; margin-bottom: 24px;
-}
-.card {
-  position: relative; background: var(--bg-surface); border: 1px solid var(--border-default);
-  border-radius: var(--radius-lg); padding: 28px 24px; text-decoration: none;
-  overflow: hidden; display: flex; flex-direction: column; gap: 4px;
-}
-.card:hover {
-  border-color: var(--border-strong); transform: translateY(-4px); box-shadow: var(--shadow-md);
-}
+.gradient-text { background: linear-gradient(135deg, #06b6d4, #0ea5e9); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.glass-card { background: var(--bg-surface); border: 1px solid var(--border-default); border-radius: var(--radius-lg); overflow: hidden; }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px; margin-bottom: 24px; }
+.card { position: relative; background: var(--bg-surface); border: 1px solid var(--border-default); border-radius: var(--radius-lg); padding: 28px 24px; text-decoration: none; overflow: hidden; display: flex; flex-direction: column; gap: 4px; }
+.card:hover { border-color: var(--border-strong); transform: translateY(-4px); box-shadow: var(--shadow-md); }
 .card:hover .card-glow { opacity: 1; }
 .card:hover .card-arrow { opacity: 1; transform: translateX(0); }
-.card-glow {
-  position: absolute; top: -40px; right: -40px;
-  width: 120px; height: 120px; border-radius: 50%;
-  filter: blur(40px); opacity: 0; transition: opacity 0.4s;
-}
-.card-glow.green { background: #f97316; }
+.card-glow { position: absolute; top: -40px; right: -40px; width: 120px; height: 120px; border-radius: 50%; filter: blur(40px); opacity: 0; transition: opacity 0.4s; }
+.card-glow.green { background: #06b6d4; }
+.card-glow.blue { background: #3b82f6; }
 .card-label { font-size: 16px; font-weight: 700; color: var(--text-primary); }
 .card-desc { font-size: 13px; color: var(--text-muted); }
-.card-arrow {
-  position: absolute; top: 24px; right: 24px; font-size: 18px;
-  color: var(--accent); opacity: 0; transform: translateX(-8px); transition: all 0.3s;
-}
-
-/* Filter */
+.card-arrow { position: absolute; top: 24px; right: 24px; font-size: 18px; color: #06b6d4; opacity: 0; transform: translateX(-8px); transition: all 0.3s; }
 .filter-card { padding: 20px 24px; margin-bottom: 20px; }
 .filter-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
 .filter-title { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--text-primary); }
-.filter-title svg { color: var(--accent); }
-.btn-ghost {
-  display: flex; align-items: center; gap: 4px;
-  background: transparent; border: 1px solid var(--border-default); color: var(--text-secondary);
-  padding: 6px 12px; border-radius: var(--radius-sm); font-size: 12px; font-weight: 500; cursor: pointer;
-}
+.btn-ghost { display: flex; align-items: center; gap: 4px; background: transparent; border: 1px solid var(--border-default); color: var(--text-secondary); padding: 6px 12px; border-radius: var(--radius-sm); font-size: 12px; font-weight: 500; cursor: pointer; }
 .btn-ghost:hover { border-color: var(--border-strong); color: var(--text-primary); }
-
 .filter-row { display: flex; gap: 14px; flex-wrap: wrap; }
 .filter-group { display: flex; flex-direction: column; gap: 6px; }
 .filter-group label { font-size: 12px; color: var(--text-muted); font-weight: 500; }
-.filter-group input, .filter-group select {
-  padding: 9px 14px; border-radius: var(--radius-sm);
-  background: var(--bg-base); border: 1px solid var(--border-default);
-  color: var(--text-primary); font-size: 13px; font-family: inherit; outline: none;
-}
-.filter-group select { appearance: none; padding-right: 32px; background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23b0b0b0%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E"); background-repeat: no-repeat; background-position: right 10px top 50%; background-size: 10px auto; }
-.filter-group input:focus, .filter-group select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+.filter-group input, .filter-group select { padding: 9px 14px; border-radius: var(--radius-sm); background: var(--bg-base); border: 1px solid var(--border-default); color: var(--text-primary); font-size: 13px; font-family: inherit; outline: none; }
+.filter-group input:focus, .filter-group select:focus { border-color: #06b6d4; box-shadow: 0 0 0 3px rgba(6,182,212,0.15); }
 .filter-info { margin-top: 12px; font-size: 12px; color: var(--text-secondary); }
-
-/* Export */
 .export-row { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
-.btn-primary, .btn-danger {
-  display: flex; align-items: center; gap: 8px;
-  border: none; padding: 10px 18px; border-radius: var(--radius-sm);
-  font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit;
-}
-.btn-primary {
-  background: linear-gradient(135deg, var(--accent), #f59e0b); color: #fff;
-  box-shadow: 0 2px 12px rgba(249,115,22,0.25);
-}
-.btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 20px rgba(249,115,22,0.35); }
-.btn-danger {
-  background: var(--danger-bg); color: var(--danger); border: 1px solid rgba(251,113,133,0.15);
-}
-.btn-danger:hover { background: rgba(251,113,133,0.15); }
-
-/* Loading */
+.btn-primary { display: flex; align-items: center; gap: 8px; border: none; padding: 10px 18px; border-radius: var(--radius-sm); font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; background: linear-gradient(135deg, #06b6d4, #0ea5e9); color: #fff; box-shadow: 0 2px 12px rgba(6,182,212,0.25); }
+.btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 20px rgba(6,182,212,0.35); }
 .loading-state { text-align: center; padding: 48px; color: var(--text-muted); display: flex; flex-direction: column; align-items: center; gap: 12px; }
-.spinner-lg {
-  width: 32px; height: 32px; border: 3px solid var(--border-default);
-  border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite;
-}
+.spinner-lg { width: 32px; height: 32px; border: 3px solid var(--border-default); border-top-color: #06b6d4; border-radius: 50%; animation: spin 0.7s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
-
-/* Table */
 .table-card { overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; min-width: 800px; }
 thead { background: var(--bg-elevated); }
-th {
-  text-align: left; padding: 14px 16px;
-  font-size: 11px; color: var(--text-muted);
-  text-transform: uppercase; letter-spacing: 0.8px; font-weight: 600;
-}
-td {
-  padding: 14px 16px; font-size: 13px;
-  color: var(--text-secondary); border-top: 1px solid var(--border-subtle);
-}
+th { text-align: left; padding: 14px 16px; font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.8px; font-weight: 600; }
+td { padding: 14px 16px; font-size: 13px; color: var(--text-secondary); border-top: 1px solid var(--border-subtle); }
 tbody tr { transition: background 0.15s; }
 tbody tr:hover { background: var(--bg-elevated); }
-
 .num-cell { font-weight: 700; font-variant-numeric: tabular-nums; }
 .name-cell { color: var(--text-primary); font-weight: 500; }
 .ok { color: var(--success); }
@@ -419,14 +347,8 @@ tbody tr:hover { background: var(--bg-elevated); }
 .sisa { font-size: 15px; }
 .muted { color: var(--text-muted); font-style: italic; font-size: 12px; }
 .empty-cell { text-align: center; padding: 40px; color: var(--text-muted); font-size: 14px; }
-
 .opname-cell { min-width: 180px; }
 .opname-list { display: flex; flex-direction: column; gap: 4px; }
-.opname-chip {
-  display: inline-flex; align-items: center; gap: 6px; font-size: 12px;
-}
-.opname-ket {
-  color: var(--text-muted); font-size: 11px;
-  background: rgba(249,115,22,0.08); padding: 2px 8px; border-radius: 4px;
-}
+.opname-chip { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; }
+.opname-ket { color: var(--text-muted); font-size: 11px; background: rgba(6,182,212,0.08); padding: 2px 8px; border-radius: 4px; }
 </style>

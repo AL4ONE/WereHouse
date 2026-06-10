@@ -4,6 +4,8 @@ import { useRouter, useRoute } from 'vue-router'
 import { computed, ref, onMounted, onBeforeUnmount, watch } from 'vue'
 import api from '@/api'
 
+// Training mode detection
+
 const authStore = useAuthStore()
 const router = useRouter()
 const route = useRoute()
@@ -14,10 +16,18 @@ const props = defineProps({
 
 const userName = computed(() => authStore.user?.name || 'User')
 const userRole = computed(() => authStore.userRole || '')
+const isTrainingMode = computed(() => authStore.isTraining)
+const displayRole = computed(() => {
+  if (isTrainingMode.value) {
+    return authStore.baseRole + ' (Latihan)'
+  }
+  return userRole.value
+})
 
 function handleLogout() {
+  const wasTraining = isTrainingMode.value
   authStore.logout()
-  router.push('/login')
+  router.push(wasTraining ? '/training/login' : '/login')
 }
 
 function isActive(path) {
@@ -78,7 +88,11 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="app-shell">
-    <nav class="topnav">
+    <div v-if="isTrainingMode" class="training-banner">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+      <span>MODE LATIHAN — Data di sini terpisah dari sistem asli</span>
+    </div>
+    <nav class="topnav" :class="{ 'training-nav': isTrainingMode }">
       <div class="nav-left">
         <router-link :to="navLinks[0]?.path || '/'" class="brand">
           <img src="@/assets/logo.png" alt="Warehouse Logo" class="brand-logo" />
@@ -142,7 +156,7 @@ onBeforeUnmount(() => {
           <div class="user-avatar">{{ userName.charAt(0)}}</div>
           <div class="user-info">
             <span class="user-name">{{ userName }}</span>
-            <span class="user-role">{{ userRole }}</span>
+            <span class="user-role" :class="{ 'training-role': isTrainingMode }">{{ displayRole }}</span>
           </div>
         </div>
 
@@ -162,6 +176,28 @@ onBeforeUnmount(() => {
 .app-shell {
   min-height: 100vh;
   background: var(--bg-base);
+}
+
+/* Training Banner */
+.training-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #06b6d4, #0284c7);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  padding: 8px 16px;
+  text-align: center;
+}
+.training-nav .nav-link.active {
+  background: linear-gradient(135deg, #06b6d4, #0ea5e9) !important;
+  box-shadow: 0 2px 8px rgba(6,182,212,0.25) !important;
+}
+.training-role {
+  color: #06b6d4 !important;
 }
 
 .topnav {

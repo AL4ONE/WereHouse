@@ -9,9 +9,14 @@ use Illuminate\Support\Facades\Validator;
 
 class BarangController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $barangs = Barang::with(['statusOpNames', 'barangMasuks', 'barangKeluars', 'suppliers'])->get();
+        $user = $request->user();
+        $isTraining = $user->isTraining();
+
+        $barangs = Barang::with(['statusOpNames', 'barangMasuks', 'barangKeluars', 'suppliers'])
+            ->trainingMode($isTraining)
+            ->get();
         return response()->json([
             'status' => "success",
             "data" => $barangs,
@@ -39,7 +44,10 @@ class BarangController extends Controller
             ]);
         }
 
-        $barang = Barang::create($request->only(['kode_barang', 'name', 'placement', 'stock_awal', 'stock_saat_ini', 'satuan', 'harga', 'min_stock']));
+        $data = $request->only(['kode_barang', 'name', 'placement', 'stock_awal', 'stock_saat_ini', 'satuan', 'harga', 'min_stock']);
+        $data['is_training'] = $request->user()->isTraining();
+
+        $barang = Barang::create($data);
 
         if ($request->has('supplier_ids')) {
             $barang->suppliers()->sync($request->supplier_ids);
@@ -50,9 +58,10 @@ class BarangController extends Controller
         ]);
     }
 
-    public function destroy($id)
+    public function destroy(Request $request, $id)
     {
-        $barang = Barang::where("id", $id)->first();
+        $isTraining = $request->user()->isTraining();
+        $barang = Barang::where("id", $id)->where('is_training', $isTraining)->first();
         if (!$barang) {
             return response()->json([
                 'error' => "barang not found"
@@ -67,7 +76,8 @@ class BarangController extends Controller
 
     public function update(Request $request, $id)
     {
-        $barang = Barang::where("id", $id)->first();
+        $isTraining = $request->user()->isTraining();
+        $barang = Barang::where("id", $id)->where('is_training', $isTraining)->first();
         if (!$barang) {
             return response()->json([
                 'error' => "barang not found"
@@ -105,7 +115,8 @@ class BarangController extends Controller
 
     public function assignSuppliers(Request $request, $id)
     {
-        $barang = Barang::where("id", $id)->first();
+        $isTraining = $request->user()->isTraining();
+        $barang = Barang::where("id", $id)->where('is_training', $isTraining)->first();
         if (!$barang) {
             return response()->json([
                 'error' => "barang not found"
@@ -133,7 +144,8 @@ class BarangController extends Controller
 
     public function addOpName(Request $request, $id)
     {
-        $barang = Barang::where("id", $id)->first();
+        $isTraining = $request->user()->isTraining();
+        $barang = Barang::where("id", $id)->where('is_training', $isTraining)->first();
 
         $val = Validator::make($request->all(), [
             'stock' => "required",
@@ -163,6 +175,7 @@ class BarangController extends Controller
             "tipe" => $request->tipe,
             "keterangan" => $request->keterangan,
             "barang_id" => $id,
+            "is_training" => $isTraining,
         ]);
         return response()->json([
             'status' => "success",
@@ -172,9 +185,10 @@ class BarangController extends Controller
 
     }
 
-    public function opName()
+    public function opName(Request $request)
     {
-        $opName = StatusOpName::all();
+        $isTraining = $request->user()->isTraining();
+        $opName = StatusOpName::trainingMode($isTraining)->get();
         return response()->json([
             'data' => $opName
         ]);

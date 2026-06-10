@@ -17,7 +17,8 @@ class TwoRoleMiddleware
     public function handle(Request $request, Closure $next): Response
     {
         $user = Auth::guard("sanctum")->user();
-        if($user->role == "Petugas" || $user->role == "Admin" ){
+        $allowedRoles = ["Petugas", "Admin", "Petugas Latihan", "Admin Latihan"];
+        if(in_array($user->role, $allowedRoles)){
             return $next($request);
         }
          return response()->json([

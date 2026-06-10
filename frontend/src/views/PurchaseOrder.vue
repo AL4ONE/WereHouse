@@ -3,21 +3,25 @@ import { ref, computed, onMounted } from 'vue'
 import api from '@/api'
 import DashboardLayout from '@/layouts/DashboardLayout.vue'
 import { useAuthStore } from '@/stores/auth'
-import { adminNavLinks, petugasNavLinks, manajerNavLinks } from '@/config/navLinks'
+import { adminNavLinks, petugasNavLinks, manajerNavLinks, trainingAdminNavLinks, trainingPetugasNavLinks, trainingManajerNavLinks } from '@/config/navLinks'
 
 const authStore = useAuthStore()
-const navLinks = authStore.userRole === 'Admin' ? adminNavLinks : 
-                 authStore.userRole === 'Petugas' ? petugasNavLinks : manajerNavLinks
+const baseRole = authStore.isTraining ? authStore.baseRole : authStore.userRole
 
-const isAdmin = computed(() => authStore.userRole === 'Admin')
-const isManajer = computed(() => authStore.userRole === 'Manajer')
-const isPetugas = computed(() => authStore.userRole === 'Petugas')
+const navLinks = authStore.isTraining
+  ? (baseRole === 'Admin' ? trainingAdminNavLinks : baseRole === 'Petugas' ? trainingPetugasNavLinks : trainingManajerNavLinks)
+  : (authStore.userRole === 'Admin' ? adminNavLinks : authStore.userRole === 'Petugas' ? petugasNavLinks : manajerNavLinks)
+
+const isAdmin = computed(() => baseRole === 'Admin')
+const isManajer = computed(() => baseRole === 'Manajer')
+const isPetugas = computed(() => baseRole === 'Petugas')
 
 const purchaseOrders = ref([])
 const suppliers = ref([])
 const barangs = ref([])
 const msg = ref({ text: '', type: '' })
 const isSubmitting = ref(false)
+const companyProfile = ref(null)
 
 const viewMode = ref('list') // 'list', 'form', 'detail'
 const selectedPO = ref(null)
@@ -55,14 +59,21 @@ const statusConfig = {
 
 async function fetchData() {
   try {
-    const [poRes, supRes, brgRes] = await Promise.all([
+    const requests = [
       api.get('/purchase-orders'),
       api.get('/suppliers'),
       api.get('/products')
-    ])
-    purchaseOrders.value = poRes.data.data
-    suppliers.value = supRes.data.data || supRes.data // Handle both API response formats
-    barangs.value = brgRes.data.data || brgRes.data
+    ]
+    if (authStore.isTraining) {
+      requests.push(api.get('/company-profile'))
+    }
+    const results = await Promise.all(requests)
+    purchaseOrders.value = results[0].data.data
+    suppliers.value = results[1].data.data || results[1].data
+    barangs.value = results[2].data.data || results[2].data
+    if (results[3]) {
+      companyProfile.value = results[3].data.data
+    }
   } catch (e) {
     console.error(e)
     msg.value = { text: 'Failed to fetch data', type: 'error' }
@@ -167,6 +178,10 @@ function printPO(po) {
   const tgl = new Date(po.order_date).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })
   const expected = po.expected_date ? new Date(po.expected_date).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' }) : '-'
   const fmt = (n) => Number(n).toLocaleString('id-ID')
+  const cp = companyProfile.value
+  const cName = authStore.isTraining && cp ? cp.company_name : 'PT MAJU MAKMUR'
+  const cAddr = authStore.isTraining && cp ? cp.company_address : 'Jln. Mawar No. 10, Madiun, Jawa Timur 130001'
+  const cInitials = authStore.isTraining && cp ? cp.company_logo_initials : 'MM'
   
   let itemsHtml = ''
   po.items.forEach((item, index) => {
@@ -249,10 +264,10 @@ function printPO(po) {
       <body>
         <div class="po-header">
           <div class="po-brand">
-            <div class="po-logo">MM</div>
+            <div class="po-logo">${cInitials}</div>
             <div class="po-company">
-              <h1>PT MAJU MAKMUR</h1>
-              <p>Jln. Mawar No. 10, Madiun, Jawa Timur 130001</p>
+              <h1>${cName}</h1>
+              <p>${cAddr}</p>
             </div>
           </div>
           <div class="po-title-block">

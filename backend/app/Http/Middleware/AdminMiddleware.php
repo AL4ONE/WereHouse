@@ -16,7 +16,7 @@ class AdminMiddleware
     public function handle(Request $request, Closure $next): Response
     {
         $user = Auth::guard("sanctum")->user();
-        if($user->role != "Admin"){
+        if($user->role != "Admin" && $user->role != "Admin Latihan"){
             return response()->json([
                 'status' => "forbiden access",
                 "message" => "hanya untuk role admin"
