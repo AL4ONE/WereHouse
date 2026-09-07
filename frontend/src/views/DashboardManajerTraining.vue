@@ -60,8 +60,8 @@ const reportData = computed(() => {
       filtered = filtered.filter(p => isDateInRange(p.created_at))
     }
     const mapped = filtered.map(p => {
-      const filteredMasuk = (p.barang_masuks || []).filter(item => isDateInRange(item.created_at))
-      const filteredKeluar = (p.barang_keluars || []).filter(item => isDateInRange(item.created_at))
+      const rawKeluar = (p.barang_keluar_items && p.barang_keluar_items.length) ? p.barang_keluar_items : (p.barang_keluars || [])
+      const filteredKeluar = rawKeluar.filter(item => isDateInRange(item.created_at))
       const opnames = (p.status_op_names || []).filter(item => isDateInRange(item.created_at))
       const totalMasuk = filteredMasuk.reduce((sum, item) => sum + item.stock, 0)
       const totalKeluar = filteredKeluar.reduce((sum, item) => sum + item.stock, 0)
@@ -92,7 +92,8 @@ const reportData = computed(() => {
       const opnames = (p.status_op_names || []).filter(item => isDateInRange(item.created_at))
       const totalOpPlus = opnames.filter(o => o.tipe === 'penambahan').reduce((s, o) => s + o.stock, 0)
       const totalOpMinus = opnames.filter(o => o.tipe === 'pengurangan').reduce((s, o) => s + o.stock, 0)
-      const keluarList = (p.barang_keluars || []).filter(item => isDateInRange(item.created_at))
+      const rawKeluar = (p.barang_keluar_items && p.barang_keluar_items.length) ? p.barang_keluar_items : (p.barang_keluars || [])
+      const keluarList = rawKeluar.filter(item => isDateInRange(item.created_at))
       keluarList.forEach(item => {
         list.push({ id: item.id, created_at: item.created_at, name: p.name, satuan: p.satuan, jumlah: item.stock, opnames, totalOpPlus, totalOpMinus, stock_saat_ini: p.stock_saat_ini })
       })

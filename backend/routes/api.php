@@ -21,7 +21,6 @@ Route::middleware(AuthMiddleware::class)->group(function () {
 
     Route::get("products", [BarangController::class, "index"]);
 
-    // Company Profile
     Route::get("/company-profile", [CompanyProfileController::class, "show"]);
     Route::post("/company-profile", [CompanyProfileController::class, "update"]);
 
@@ -48,13 +47,13 @@ Route::middleware(AuthMiddleware::class)->group(function () {
         Route::get("/inventory-in", [BarangMasukController::class, "index"]);
         
         Route::post("/inventory-out", [BarangKeluarController::class, "out"]);
+        Route::post("/inventory-out/{id}", [BarangKeluarController::class, "update"]);
         Route::get("/inventory-out", [BarangKeluarController::class, "index"]);
 
         Route::post("products/{id}", [BarangController::class, "update"]);
         Route::post("products/{id}/op-name", [BarangController::class, "addOpName"]);
         Route::get("products/op-name", [BarangController::class, "opName"]);
 
-        // Purchase Order routes
         Route::get("/purchase-orders", [PurchaseOrderController::class, "index"]);
         Route::post("/purchase-orders", [PurchaseOrderController::class, "store"]);
         Route::get("/purchase-orders/{id}", [PurchaseOrderController::class, "show"]);

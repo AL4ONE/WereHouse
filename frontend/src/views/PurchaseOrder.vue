@@ -4,6 +4,7 @@ import api from '@/api'
 import DashboardLayout from '@/layouts/DashboardLayout.vue'
 import { useAuthStore } from '@/stores/auth'
 import { adminNavLinks, petugasNavLinks, manajerNavLinks, trainingAdminNavLinks, trainingPetugasNavLinks, trainingManajerNavLinks } from '@/config/navLinks'
+import logoUrl from '@/assets/logo.png'
 
 const authStore = useAuthStore()
 const baseRole = authStore.isTraining ? authStore.baseRole : authStore.userRole
@@ -23,7 +24,7 @@ const msg = ref({ text: '', type: '' })
 const isSubmitting = ref(false)
 const companyProfile = ref(null)
 
-const viewMode = ref('list') // 'list', 'form', 'detail'
+const viewMode = ref('list') 
 const selectedPO = ref(null)
 
 const defaultForm = {
@@ -62,11 +63,9 @@ async function fetchData() {
     const requests = [
       api.get('/purchase-orders'),
       api.get('/suppliers'),
-      api.get('/products')
+      api.get('/products'),
+      api.get('/company-profile')
     ]
-    if (authStore.isTraining) {
-      requests.push(api.get('/company-profile'))
-    }
     const results = await Promise.all(requests)
     purchaseOrders.value = results[0].data.data
     suppliers.value = results[1].data.data || results[1].data
@@ -179,9 +178,9 @@ function printPO(po) {
   const expected = po.expected_date ? new Date(po.expected_date).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' }) : '-'
   const fmt = (n) => Number(n).toLocaleString('id-ID')
   const cp = companyProfile.value
-  const cName = authStore.isTraining && cp ? cp.company_name : 'PT MAJU MAKMUR'
-  const cAddr = authStore.isTraining && cp ? cp.company_address : 'Jln. Mawar No. 10, Madiun, Jawa Timur 130001'
-  const cInitials = authStore.isTraining && cp ? cp.company_logo_initials : 'MM'
+  const cName = cp ? cp.company_name : 'PT MAJU MAKMUR'
+  const cAddr = cp ? cp.company_address : 'Jln. Mawar No. 10, Madiun, Jawa Timur 130001'
+  const cInitials = cp ? cp.company_logo_initials : 'MM'
   
   let itemsHtml = ''
   po.items.forEach((item, index) => {
@@ -211,7 +210,7 @@ function printPO(po) {
 
           .po-header { display: flex; align-items: flex-start; justify-content: space-between; padding-bottom: 24px; border-bottom: 2px solid #f1f5f9; margin-bottom: 32px; }
           .po-brand { display: flex; align-items: center; gap: 16px; }
-          .po-logo { width: 56px; height: 56px; background: linear-gradient(135deg, #8b5cf6, #6d28d9); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 800; font-size: 20px; box-shadow: 0 4px 12px rgba(139,92,246,0.25); }
+          .po-logo { width: 56px; height: 56px; object-fit: contain; }
           .po-company h1 { font-size: 22px; font-weight: 800; color: #0f172a; letter-spacing: -0.5px; }
           .po-company p { font-size: 12px; color: #64748b; margin-top: 2px; }
           .po-title-block { text-align: right; }
@@ -264,7 +263,7 @@ function printPO(po) {
       <body>
         <div class="po-header">
           <div class="po-brand">
-            <div class="po-logo">${cInitials}</div>
+            <img src="${logoUrl}" alt="Logo" class="po-logo" />
             <div class="po-company">
               <h1>${cName}</h1>
               <p>${cAddr}</p>
@@ -424,7 +423,6 @@ onMounted(() => {
       </div>
     </div>
 
-    <!-- FORM VIEW -->
     <div v-else-if="viewMode === 'form'" class="glass-card">
       <h3 class="card-title">{{ form.id ? 'Edit Purchase Order' : 'Create New Purchase Order' }}</h3>
       
@@ -493,7 +491,6 @@ onMounted(() => {
       </form>
     </div>
 
-    <!-- DETAIL VIEW -->
     <div v-else-if="viewMode === 'detail' && selectedPO" class="glass-card">
       <div class="detail-header">
         <div>
@@ -562,7 +559,6 @@ onMounted(() => {
           🖨️ Print PO
         </button>
 
-        <!-- Workflow Actions -->
         <template v-if="selectedPO.status === 'pending' && (isAdmin || isManajer)">
           <button class="btn-submit orange" @click="handleAction('approve', selectedPO.id)">✅ Approve PO</button>
         </template>

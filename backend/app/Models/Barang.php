@@ -26,6 +26,10 @@ class Barang extends Model
     {
         return $this->hasMany(BarangKeluar::class);
     }
+    public function barangKeluarItems()
+    {
+        return $this->hasMany(BarangKeluarItem::class);
+    }
     public function statusOpNames()
     {
         return $this->hasMany(StatusOpName::class);

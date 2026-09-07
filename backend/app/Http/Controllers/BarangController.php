@@ -14,7 +14,7 @@ class BarangController extends Controller
         $user = $request->user();
         $isTraining = $user->isTraining();
 
-        $barangs = Barang::with(['statusOpNames', 'barangMasuks', 'barangKeluars', 'suppliers'])
+        $barangs = Barang::with(['statusOpNames', 'barangMasuks', 'barangKeluars', 'barangKeluarItems', 'suppliers'])
             ->trainingMode($isTraining)
             ->get();
         return response()->json([
@@ -85,7 +85,7 @@ class BarangController extends Controller
         }
 
         $val = Validator::make($request->all(), [
-            "kode_barang" => "required|unique:barangs,kode_barang,".$id,
+            "kode_barang" => "required|unique:barangs,kode_barang," . $id,
             "name" => "required",
             "placement" => "nullable|string",
             "stock_awal" => "required|numeric",

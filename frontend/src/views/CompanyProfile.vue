@@ -2,7 +2,12 @@
 import { ref, onMounted } from 'vue'
 import api from '@/api'
 import DashboardLayout from '@/layouts/DashboardLayout.vue'
-import { trainingManajerNavLinks as navLinks } from '@/config/navLinks'
+import { useAuthStore } from '@/stores/auth'
+import { manajerNavLinks, trainingManajerNavLinks } from '@/config/navLinks'
+import logoUrl from '@/assets/logo.png'
+
+const authStore = useAuthStore()
+const navLinks = authStore.isTraining ? trainingManajerNavLinks : manajerNavLinks
 
 const profile = ref({
   company_name: '',
@@ -47,9 +52,11 @@ onMounted(() => {
 
 <template>
   <DashboardLayout :navLinks="navLinks">
-    <div class="hero">
-      <h1>Company <span class="gradient-text">Profile</span></h1>
-      <p>Edit informasi perusahaan untuk laporan & invoice di mode latihan</p>
+    <div :class="authStore.isTraining ? 'theme-training' : 'theme-production'">
+      <div class="hero">
+        <h1>Company <span class="gradient-text">Profile</span></h1>
+      <p v-if="authStore.isTraining">Edit informasi perusahaan untuk laporan & invoice di mode latihan</p>
+      <p v-else>Edit informasi perusahaan untuk laporan & invoice</p>
     </div>
 
     <div v-if="msg.text" class="alert" :class="msg.type">
@@ -96,7 +103,7 @@ onMounted(() => {
         <div class="invoice-preview">
           <div class="inv-header-preview">
             <div class="inv-brand-preview">
-              <div class="inv-logo-preview">{{ profile.company_logo_initials || 'XX' }}</div>
+              <img :src="logoUrl" alt="Logo" class="inv-logo-preview" />
               <div class="inv-company-preview">
                 <h2>{{ profile.company_name || 'Company Name' }}</h2>
                 <p>{{ profile.company_address || 'Company Address' }}</p>
@@ -116,7 +123,7 @@ onMounted(() => {
         <div class="invoice-preview sj-theme">
           <div class="inv-header-preview">
             <div class="inv-brand-preview">
-              <div class="inv-logo-preview sj-logo">{{ profile.company_logo_initials || 'XX' }}</div>
+              <img :src="logoUrl" alt="Logo" class="inv-logo-preview sj-logo" />
               <div class="inv-company-preview">
                 <h2>{{ profile.company_name || 'Company Name' }}</h2>
                 <p>{{ profile.company_address || 'Company Address' }}</p>
@@ -128,6 +135,7 @@ onMounted(() => {
             </div>
           </div>
         </div>
+        </div>
       </div>
     </div>
   </DashboardLayout>
@@ -137,14 +145,17 @@ onMounted(() => {
 .hero { margin-bottom: 24px; }
 .hero h1 { font-size: 26px; font-weight: 800; color: var(--text-primary); margin-bottom: 4px; }
 .hero p { font-size: 14px; color: var(--text-muted); }
-.gradient-text { background: linear-gradient(135deg, #06b6d4, #0ea5e9); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.theme-training .gradient-text { background: linear-gradient(135deg, #06b6d4, #0ea5e9); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.theme-production .gradient-text { background: linear-gradient(135deg, #f97316, #ea580c); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
 
 .alert { padding: 12px 16px; border-radius: var(--radius-sm); font-size: 13px; margin-bottom: 18px; display: flex; align-items: center; gap: 8px; }
 .alert.ok { background: var(--success-bg); color: var(--success); border: 1px solid rgba(52,211,153,0.15); }
 .alert.error { background: var(--danger-bg); color: var(--danger); border: 1px solid rgba(251,113,133,0.15); }
 
 .loading-state { text-align: center; padding: 48px; color: var(--text-muted); display: flex; flex-direction: column; align-items: center; gap: 12px; }
-.spinner-lg { width: 32px; height: 32px; border: 3px solid var(--border-default); border-top-color: #06b6d4; border-radius: 50%; animation: spin 0.7s linear infinite; }
+.spinner-lg { width: 32px; height: 32px; border: 3px solid var(--border-default); border-radius: 50%; animation: spin 0.7s linear infinite; }
+.theme-training .spinner-lg { border-top-color: #06b6d4; }
+.theme-production .spinner-lg { border-top-color: var(--accent); }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 .content-grid { display: grid; grid-template-columns: 400px 1fr; gap: 24px; align-items: start; }
@@ -158,13 +169,17 @@ onMounted(() => {
 .field { margin-bottom: 18px; }
 .field label { display: block; font-size: 13px; color: var(--text-secondary); margin-bottom: 8px; font-weight: 500; }
 .field input { width: 100%; padding: 11px 14px; background: var(--bg-base); border: 1px solid var(--border-default); border-radius: var(--radius-sm); color: var(--text-primary); font-size: 14px; font-family: inherit; outline: none; }
-.field input:focus { border-color: #06b6d4; box-shadow: 0 0 0 3px rgba(6,182,212,0.15); }
+.theme-training .field input:focus { border-color: #06b6d4; box-shadow: 0 0 0 3px rgba(6,182,212,0.15); }
+.theme-production .field input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(249,115,22,0.15); }
 .field input::placeholder { color: var(--text-muted); }
 .form-textarea { width: 100%; padding: 11px 14px; background: var(--bg-base); border: 1px solid var(--border-default); border-radius: var(--radius-sm); color: var(--text-primary); font-size: 14px; font-family: inherit; outline: none; min-height: 80px; resize: vertical; }
-.form-textarea:focus { border-color: #06b6d4; box-shadow: 0 0 0 3px rgba(6,182,212,0.15); }
+.theme-training .form-textarea:focus { border-color: #06b6d4; box-shadow: 0 0 0 3px rgba(6,182,212,0.15); }
+.theme-production .form-textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(249,115,22,0.15); }
 .hint { font-size: 11px; color: var(--text-muted); margin-top: 4px; display: block; }
 
-.btn-submit { width: 100%; border: none; padding: 12px 20px; border-radius: var(--radius-sm); font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit; color: #fff; display: flex; align-items: center; justify-content: center; gap: 8px; background: linear-gradient(135deg, #06b6d4, #0ea5e9); box-shadow: 0 2px 12px rgba(6,182,212,0.25); }
+.btn-submit { width: 100%; border: none; padding: 12px 20px; border-radius: var(--radius-sm); font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit; color: #fff; display: flex; align-items: center; justify-content: center; gap: 8px; }
+.theme-training .btn-submit { background: linear-gradient(135deg, #06b6d4, #0ea5e9); box-shadow: 0 2px 12px rgba(6,182,212,0.25); }
+.theme-production .btn-submit { background: linear-gradient(135deg, #f97316, #ea580c); box-shadow: 0 2px 12px rgba(249,115,22,0.25); }
 .btn-submit:hover:not(:disabled) { transform: translateY(-1px); }
 .btn-submit:disabled { opacity: 0.6; cursor: not-allowed; }
 .spinner { width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.6s linear infinite; }
@@ -173,8 +188,8 @@ onMounted(() => {
 .invoice-preview { background: #fff; border-radius: 12px; padding: 24px; border: 1px solid #e2e8f0; }
 .inv-header-preview { display: flex; align-items: flex-start; justify-content: space-between; }
 .inv-brand-preview { display: flex; align-items: center; gap: 14px; }
-.inv-logo-preview { width: 48px; height: 48px; background: linear-gradient(135deg, #0ea5e9, #3b82f6); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 800; font-size: 16px; box-shadow: 0 2px 8px rgba(59,130,246,0.25); flex-shrink: 0; }
-.inv-logo-preview.sj-logo { background: linear-gradient(135deg, #10b981, #059669); box-shadow: 0 2px 8px rgba(16,185,129,0.25); }
+.inv-logo-preview { width: 48px; height: 48px; object-fit: contain; }
+.inv-logo-preview.sj-logo { width: 48px; height: 48px; object-fit: contain; }
 .inv-company-preview h2 { font-size: 16px; font-weight: 800; color: #0f172a; letter-spacing: -0.3px; margin: 0; }
 .inv-company-preview p { font-size: 11px; color: #64748b; margin: 2px 0 0; }
 .inv-title-preview { text-align: right; }

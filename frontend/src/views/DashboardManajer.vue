@@ -11,6 +11,7 @@ const authStore = useAuthStore()
 const navLinks = authStore.isTraining ? trainingManajerNavLinks : manajerNavLinks
 
 const barangs = ref([])
+const companyProfile = ref(null)
 const isLoading = ref(false)
 const startDate = ref('')
 const endDate = ref('')
@@ -19,8 +20,12 @@ const reportType = ref('semua')
 async function fetchBarangs() {
   isLoading.value = true
   try {
-    const res = await api.get('/products')
-    barangs.value = res.data.data
+    const [prodRes, cpRes] = await Promise.all([
+      api.get('/products'),
+      api.get('/company-profile')
+    ])
+    barangs.value = prodRes.data.data
+    companyProfile.value = cpRes.data.data
   } catch (e) { 
     console.error(e) 
   } 
@@ -52,8 +57,8 @@ const reportData = computed(() => {
       filtered = filtered.filter(p => isDateInRange(p.created_at))
     }
     const mapped = filtered.map(p => {
-      const filteredMasuk = (p.barang_masuks || []).filter(item => isDateInRange(item.created_at))
-      const filteredKeluar = (p.barang_keluars || []).filter(item => isDateInRange(item.created_at))
+      const rawKeluar = (p.barang_keluar_items && p.barang_keluar_items.length) ? p.barang_keluar_items : (p.barang_keluars || [])
+      const filteredKeluar = rawKeluar.filter(item => isDateInRange(item.created_at))
       const opnames = (p.status_op_names || []).filter(item => isDateInRange(item.created_at))
       const totalMasuk = filteredMasuk.reduce((sum, item) => sum + item.stock, 0)
       const totalKeluar = filteredKeluar.reduce((sum, item) => sum + item.stock, 0)
@@ -84,7 +89,8 @@ const reportData = computed(() => {
       const opnames = (p.status_op_names || []).filter(item => isDateInRange(item.created_at))
       const totalOpPlus = opnames.filter(o => o.tipe === 'penambahan').reduce((s, o) => s + o.stock, 0)
       const totalOpMinus = opnames.filter(o => o.tipe === 'pengurangan').reduce((s, o) => s + o.stock, 0)
-      const keluarList = (p.barang_keluars || []).filter(item => isDateInRange(item.created_at))
+      const rawKeluar = (p.barang_keluar_items && p.barang_keluar_items.length) ? p.barang_keluar_items : (p.barang_keluars || [])
+      const keluarList = rawKeluar.filter(item => isDateInRange(item.created_at))
       keluarList.forEach(item => {
         list.push({ id: item.id, created_at: item.created_at, name: p.name, satuan: p.satuan, jumlah: item.stock, opnames, totalOpPlus, totalOpMinus, stock_saat_ini: p.stock_saat_ini })
       })
@@ -102,8 +108,9 @@ function resetFilter() {
 
 function cetakPDF() {
   const doc = new jsPDF({ orientation: 'landscape' })
+  const cpName = companyProfile.value?.company_name || 'PT MAJU MAKMUR'
   
-  doc.text('Warehouse Inventory Report', 14, 15)
+  doc.text(`Warehouse Inventory Report - ${cpName}`, 14, 15)
   doc.setFontSize(10)
   doc.text(`Filter: ${reportType.value.toUpperCase()}`, 14, 22)
   if (startDate.value || endDate.value) {

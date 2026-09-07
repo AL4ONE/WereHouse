@@ -18,6 +18,7 @@ export const petugasNavLinks = [
 export const manajerNavLinks = [
   { path: '/dashboard/manager', label: 'Dashboard' },
   { path: '/manager/purchase-orders', label: 'Purchase Orders' },
+  { path: '/manager/company-profile', label: 'Company Profile' },
 ]
 
 // === Training Mode Nav Links ===

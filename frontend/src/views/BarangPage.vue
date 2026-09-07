@@ -232,7 +232,7 @@ function cetakPDF() {
     startY: 36,
     head: [['No', 'Product Name', 'Placement', 'Unit', 'Supplier', 'Stock']],
     body: bodyData,
-    headStyles: { fillColor: [245, 158, 11] }, // Match accent color
+    headStyles: { fillColor: [245, 158, 11] },
   })
 
   doc.save('Inventory_Report.pdf')
@@ -350,7 +350,14 @@ function cetakPDF() {
               <label>Product Code</label>
               <div class="flex-input">
                 <input v-model="form.kode_barang" placeholder="Example: PRD-001" required />
-                <button type="button" class="btn-ghost small" @click="form.kode_barang = 'PRD-' + Math.floor(Math.random()*10000).toString().padStart(4, '0')">Generate</button>
+                <button 
+                  type="button" 
+                  class="btn-ghost small" 
+                  :disabled="Boolean(form.kode_barang && form.kode_barang.trim())" 
+                  @click="form.kode_barang = 'PRD-' + Math.floor(Math.random()*10000).toString().padStart(4, '0')"
+                >
+                  Generate
+                </button>
               </div>
             </div>
             <div class="field"><label>Product Name</label><input v-model="form.name" placeholder="Product name" required /></div>
@@ -496,7 +503,8 @@ tbody tr:hover { background: var(--bg-elevated); }
   background: var(--bg-elevated); color: var(--text-secondary); border: 1px solid var(--border-default);
   padding: 9px 18px; border-radius: var(--radius-sm); font-size: 13px; cursor: pointer; font-family: inherit;
 }
-.btn-ghost:hover { border-color: var(--border-strong); color: var(--text-primary); }
+.btn-ghost:hover:not(:disabled) { border-color: var(--border-strong); color: var(--text-primary); }
+.btn-ghost:disabled { opacity: 0.45; cursor: not-allowed; }
 .btn-ghost.small { padding: 8px 12px; font-size: 12px; }
 
 .flex-input { display: flex; gap: 8px; }
